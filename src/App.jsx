@@ -27,6 +27,7 @@ const FORMATS   = ["Reel","Carousel","Static","Testimonial","Story Reel"];
 const WEEKS     = ["1","2","3","4"];
 const STATUSES  = ["Draft","For Review","Approved","For Revision","Uploaded"];
 const STORY_TYPES = ["Unique — BTS moment","Unique — Poll / Quiz","Unique — Behind the chair","Unique — Team feature","Unique — Offer / Giveaway","Unique — Client reaction","Unique — Education","Repost from feed"];
+const GRID_ZOOM_ASPECTS = ["1/1","4/5","3/4","2/3","9/16"];
 const NAV_ITEMS = ["Feed Calendar","Stories","Analytics"];
 
 const PF="'Playfair Display',Georgia,serif";
@@ -575,8 +576,7 @@ function StoryDetail({seq,onClose,onStatus,onApproval,comment,setComment,onAddCo
 
 function IgGrid({posts,selected,onSelect}){
   const[zoom,setZoom]=useState(1);
-  const ZOOM_ASPECT=["1/1","4/5","3/4","2/3","9/16"];
-  const cellAspect=ZOOM_ASPECT[zoom];
+  const cellAspect=GRID_ZOOM_ASPECTS[zoom];
   const ordered=sortNewestFirst(posts);
   return(
     <div style={{background:SURF,borderRadius:12,padding:14,border:`1px solid ${BORDER}`}}>
