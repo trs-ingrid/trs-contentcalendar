@@ -1,10 +1,12 @@
 {
   "name": "tara-rose-cms",
+  "private": true,
   "version": "1.0.0",
+  "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npx --yes vite build",
-    "preview": "npx --yes vite preview"
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
     "react": "^18.2.0",
