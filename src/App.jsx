@@ -6,6 +6,12 @@ const supabase = createClient(
   import.meta.env.VITE_SUPABASE_ANON_KEY
 );
 
+function useIsMobile(){
+  const[mob,setMob]=useState(typeof window!=="undefined"&&window.innerWidth<768);
+  useEffect(()=>{const h=()=>setMob(window.innerWidth<768);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);
+  return mob;
+}
+
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const PILLARS = [
   { name:"Transformation",  color:"#3B6D11", bg:"#EEF3C7" },
@@ -173,7 +179,7 @@ function MediaPreview({files,format,thumbnail,clickToPlay,style={}}){
   if(format==="Carousel"&&files.length>1){
     const cf=files[Math.min(cidx,files.length-1)];
     return(
-      <div style={{position:"relative",width:"100%",height:"100%",...style}}>
+      <div style={{...style,position:"relative",width:"100%",height:"100%"}}>
         <img src={cf.url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
         <div style={{position:"absolute",top:6,left:0,right:0,display:"flex",gap:2,padding:"0 8px",pointerEvents:"none"}}>
           {files.map((_,i)=><div key={i} style={{flex:1,height:2,borderRadius:1,background:i===cidx?"rgba(255,255,255,0.95)":"rgba(255,255,255,0.35)"}}/>)}
@@ -454,7 +460,7 @@ function PostDetail({post,onClose,onStatus,onApproval,comment,setComment,onAddCo
   const hasMedia=hasVideo||hasImage;
   const mediaFiles=hasVideo?videoFiles:imgFiles;
   return(
-    <div style={{background:SURF,border:`1px solid ${BORDER}`,borderRadius:12,overflow:"hidden"}}>
+    <div style={{background:SURF,border:`1px solid ${BORDER}`,borderRadius:12,overflow:"hidden",maxHeight:"calc(100vh - 80px)",overflowY:"auto"}}>
       <div style={{padding:"14px 18px",borderBottom:`1px solid ${BORDER2}`,display:"flex",justifyContent:"space-between",alignItems:"center",background:SURF2}}>
         <div><SectionRule color={TEAL}/><HL size={15}>Post detail</HL></div>
         <button onClick={onClose} style={{fontSize:20,border:"none",background:"none",cursor:"pointer",color:TX3,lineHeight:1,fontFamily:IN}}>×</button>
@@ -464,7 +470,7 @@ function PostDetail({post,onClose,onStatus,onApproval,comment,setComment,onAddCo
           <div style={{width:28,height:28,borderRadius:"50%",background:SURF3,border:`1px solid ${BORDER}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontFamily:IN,fontWeight:700,color:TEAL}}>TR</div>
           <div style={{fontSize:13,fontFamily:IN,fontWeight:700,color:TX1}}>tararosesalon</div>
           {post.format==="Reel"&&<span style={{marginLeft:"auto",fontSize:9,fontFamily:IN,fontWeight:700,background:"#111",color:"#fff",padding:"2px 7px",borderRadius:4,letterSpacing:"0.06em"}}>REEL</span>}
-          {post.format==="Carousel"&&imgFiles.length>1&&<span style={{marginLeft:"auto",fontSize:9,fontFamily:IN,fontWeight:700,background:"#111",color:"#fff",padding:"2px 7px",borderRadius:4}}>1/{imgFiles.length}</span>}
+          {post.format==="Carousel"&&imgFiles.length>1&&<span style={{marginLeft:"auto",fontSize:9,fontFamily:IN,fontWeight:700,background:"#111",color:"#fff",padding:"2px 7px",borderRadius:4}}>{imgFiles.length} slides</span>}
         </div>
         <div style={{aspectRatio:"4/5",background:hasMedia?"#000":pl.bg,position:"relative",overflow:"hidden"}}>
           {hasMedia
@@ -511,7 +517,7 @@ function StoryDetail({seq,onClose,onStatus,onApproval,comment,setComment,onAddCo
   const pl=getPillar(seq.pillar);
   const imgs=seq.images||[];
   return(
-    <div style={{background:SURF,border:`1px solid ${BORDER}`,borderRadius:12,overflow:"hidden"}}>
+    <div style={{background:SURF,border:`1px solid ${BORDER}`,borderRadius:12,overflow:"hidden",maxHeight:"calc(100vh - 80px)",overflowY:"auto"}}>
       <div style={{padding:"14px 18px",borderBottom:`1px solid ${BORDER2}`,display:"flex",justifyContent:"space-between",alignItems:"center",background:SURF2}}>
         <div><SectionRule color={PURPLE}/><HL size={15}>Story sequence</HL></div>
         <button onClick={onClose} style={{fontSize:20,border:"none",background:"none",cursor:"pointer",color:TX3,fontFamily:IN}}>×</button>
@@ -575,9 +581,9 @@ function IgGrid({posts,selected,onSelect}){
         <div><div style={{fontFamily:IN,fontSize:13,fontWeight:700,color:TX1}}>tararosesalon</div><div style={{fontFamily:IN,fontSize:11,fontWeight:600,color:TX3}}>Premium hair · UAE</div></div>
         <div style={{marginLeft:"auto",display:"flex",gap:4,alignItems:"center"}}>
           <span style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX4,marginRight:2}}>zoom</span>
-          <button onClick={()=>setZoom(z=>Math.max(0,z-1))} disabled={zoom===0} title="Zoom in" style={{width:26,height:26,borderRadius:6,border:`1px solid ${BORDER}`,background:zoom===0?SURF:SURF2,color:zoom===0?TX4:TX2,fontFamily:IN,fontSize:14,fontWeight:700,cursor:zoom===0?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>+</button>
-          <span style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX4,minWidth:18,textAlign:"center"}}>{cols}×</span>
-          <button onClick={()=>setZoom(z=>Math.min(4,z+1))} disabled={zoom===4} title="Zoom out" style={{width:26,height:26,borderRadius:6,border:`1px solid ${BORDER}`,background:zoom===4?SURF:SURF2,color:zoom===4?TX4:TX2,fontFamily:IN,fontSize:14,fontWeight:700,cursor:zoom===4?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>−</button>
+          <button onClick={()=>setZoom(z=>Math.max(0,z-1))} disabled={zoom===0} title="Fewer columns — zoom in" style={{width:26,height:26,borderRadius:6,border:`1px solid ${BORDER}`,background:zoom===0?SURF:SURF2,color:zoom===0?TX4:TX2,fontFamily:IN,fontSize:14,fontWeight:700,cursor:zoom===0?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>−</button>
+          <span style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX4,minWidth:18,textAlign:"center"}}>{cols}</span>
+          <button onClick={()=>setZoom(z=>Math.min(4,z+1))} disabled={zoom===4} title="More columns — see full grid" style={{width:26,height:26,borderRadius:6,border:`1px solid ${BORDER}`,background:zoom===4?SURF:SURF2,color:zoom===4?TX4:TX2,fontFamily:IN,fontSize:14,fontWeight:700,cursor:zoom===4?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>+</button>
         </div>
       </div>
       <div style={{display:"grid",gridTemplateColumns:`repeat(${cols},1fr)`,gap:2}}>
@@ -635,8 +641,32 @@ function FilterBar({filter,setFilter,view,setView,onAdd}){
 }
 
 function CalRow({p,selected,onSelect,onDelete,onDup}){
+  const isMob=useIsMobile();
   const pl=getPillar(p.pillar);
   const thumb=(p.images||[])[0]||(p.video||[])[0]||null;
+  if(isMob) return(
+    <div onClick={()=>onSelect(p.id)} style={{display:"flex",gap:10,alignItems:"center",padding:"10px 12px",borderRadius:10,border:`1px solid ${selected===p.id?TEAL:BORDER}`,background:selected===p.id?`${TEAL}0D`:SURF,cursor:"pointer"}}>
+      <div style={{width:38,height:38,borderRadius:7,overflow:"hidden",background:pl.bg,border:`1px solid ${BORDER}`,flexShrink:0}}>
+        {thumb?(checkIsVideo(thumb)
+          ?<div style={{width:"100%",height:"100%",background:"#111",display:"flex",alignItems:"center",justifyContent:"center"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="white"><path d="M4 2l16 10L4 22V2z"/></svg></div>
+          :<img src={thumb.url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>)
+          :<div style={{width:"100%",height:"100%",background:pl.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:IN,fontSize:9,fontWeight:700,color:pl.color}}>{p.format?p.format[0]:""}</div>}
+      </div>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontFamily:IN,fontSize:12,fontWeight:600,color:TX2,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{p.subject||<span style={{color:TX4,fontStyle:"italic"}}>No subject</span>}</div>
+        <div style={{display:"flex",gap:6,marginTop:4,flexWrap:"wrap"}}>
+          <StatusPill status={p.status}/>
+          <span style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX3}}>{p.day} · W{p.week} · {p.format}</span>
+        </div>
+      </div>
+      <div style={{display:"flex",gap:6,flexShrink:0}}>
+        <button onClick={e=>{e.stopPropagation();onDup(p.id);}} title="Duplicate" style={{border:"none",background:"none",cursor:"pointer",color:TX4,padding:4,lineHeight:1,display:"flex",alignItems:"center"}}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        </button>
+        <button onClick={e=>{e.stopPropagation();onDelete(p.id);}} style={{fontFamily:IN,fontSize:15,border:"none",background:"none",cursor:"pointer",color:TX4,padding:"0 2px",lineHeight:1}}>×</button>
+      </div>
+    </div>
+  );
   return(
     <div onClick={()=>onSelect(p.id)} style={{display:"grid",gridTemplateColumns:"44px 44px 100px 100px 1fr 70px 22px 22px",gap:8,alignItems:"center",padding:"10px 14px",borderRadius:10,border:`1px solid ${selected===p.id?TEAL:BORDER}`,background:selected===p.id?`${TEAL}0D`:SURF,cursor:"pointer"}}>
       <div style={{fontFamily:IN,fontSize:12,fontWeight:700,color:TX1}}>{p.day}</div>
@@ -695,6 +725,7 @@ function FeedTab({month}){
     if(error){alert("Duplicate failed: "+error.message);return;}
     setPosts(v=>[...v,normalise(data[0],"feed")]);
   };
+  const isMob=useIsMobile();
   const toggleWeek=w=>setCollapsedWeeks(c=>({...c,[w]:!c[w]}));
 
   return(
@@ -712,7 +743,20 @@ function FeedTab({month}){
           <div style={{fontFamily:IN,fontSize:13,fontWeight:600,color:TX4}}>No posts for {month}. Click + Add post to begin.</div>
         </div>
       )}
-      <div style={{display:"grid",gridTemplateColumns:sel&&!editing?"1fr 360px":"1fr",gap:16,alignItems:"start"}}>
+      {isMob&&sel&&!editing&&(
+        <div style={{position:"fixed",inset:0,zIndex:50,background:BG,overflowY:"auto"}}>
+          <div style={{padding:"12px 16px",borderBottom:`1px solid ${BORDER2}`,display:"flex",alignItems:"center",gap:10,background:SURF,position:"sticky",top:0,zIndex:1}}>
+            <button onClick={()=>setSelected(null)} style={{border:"none",background:"none",cursor:"pointer",color:TEAL,fontFamily:IN,fontSize:13,fontWeight:700,padding:0,display:"flex",alignItems:"center",gap:6}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+              Back
+            </button>
+          </div>
+          <div style={{padding:16}}>
+            <PostDetail post={sel} onClose={()=>setSelected(null)} onStatus={s=>setSt(sel.id,s)} onApproval={s=>setSt(sel.id,s)} comment={comment} setComment={setComment} onAddComment={()=>addC(sel.id)} onEdit={()=>{setEditing(sel.id);setSelected(null);}} onDelete={()=>del(sel.id)}/>
+          </div>
+        </div>
+      )}
+      <div style={{display:"grid",gridTemplateColumns:!isMob&&sel&&!editing?"1fr 360px":"1fr",gap:16,alignItems:"start"}}>
         <div>
           {view==="calendar"?(
             ["1","2","3","4"].map(w=>{
@@ -735,7 +779,7 @@ function FeedTab({month}){
             })
           ):<IgGrid posts={posts} selected={selected} onSelect={id=>{setSelected(selected===id?null:id);setEditing(null);}}/>}
         </div>
-        {sel&&!editing&&<PostDetail post={sel} onClose={()=>setSelected(null)} onStatus={s=>setSt(sel.id,s)} onApproval={s=>setSt(sel.id,s)} comment={comment} setComment={setComment} onAddComment={()=>addC(sel.id)} onEdit={()=>{setEditing(sel.id);setSelected(null);}} onDelete={()=>del(sel.id)}/>}
+        {sel&&!editing&&<div style={{position:"sticky",top:16}}><PostDetail post={sel} onClose={()=>setSelected(null)} onStatus={s=>setSt(sel.id,s)} onApproval={s=>setSt(sel.id,s)} comment={comment} setComment={setComment} onAddComment={()=>addC(sel.id)} onEdit={()=>{setEditing(sel.id);setSelected(null);}} onDelete={()=>del(sel.id)}/></div>}
       </div>
     </div>
   );
@@ -776,6 +820,7 @@ function StoriesTab({month}){
     if(error){alert("Duplicate failed: "+error.message);return;}
     setSeqs(v=>[...v,normalise(data[0],"story")]);
   };
+  const isMob=useIsMobile();
   const toggleWeek=w=>setCollapsedWeeks(c=>({...c,[w]:!c[w]}));
 
   return(
@@ -802,7 +847,20 @@ function StoriesTab({month}){
           <div style={{fontFamily:IN,fontSize:13,fontWeight:600,color:TX4}}>No sequences for {month}. Click + Add sequence to begin.</div>
         </div>
       )}
-      <div style={{display:"grid",gridTemplateColumns:sel&&!editing?"1fr 360px":"1fr",gap:16,alignItems:"start"}}>
+      {isMob&&sel&&!editing&&(
+        <div style={{position:"fixed",inset:0,zIndex:50,background:BG,overflowY:"auto"}}>
+          <div style={{padding:"12px 16px",borderBottom:`1px solid ${BORDER2}`,display:"flex",alignItems:"center",gap:10,background:SURF,position:"sticky",top:0,zIndex:1}}>
+            <button onClick={()=>setSelected(null)} style={{border:"none",background:"none",cursor:"pointer",color:TEAL,fontFamily:IN,fontSize:13,fontWeight:700,padding:0,display:"flex",alignItems:"center",gap:6}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+              Back
+            </button>
+          </div>
+          <div style={{padding:16}}>
+            <StoryDetail seq={sel} onClose={()=>setSelected(null)} onStatus={s=>setSt(sel.id,s)} onApproval={s=>setSt(sel.id,s)} comment={comment} setComment={setComment} onAddComment={()=>addC(sel.id)} onEdit={()=>{setEditing(sel.id);setSelected(null);}} onDelete={()=>del(sel.id)}/>
+          </div>
+        </div>
+      )}
+      <div style={{display:"grid",gridTemplateColumns:!isMob&&sel&&!editing?"1fr 360px":"1fr",gap:16,alignItems:"start"}}>
         <div>
           {["1","2","3","4"].map(w=>{
             const wp=filt.filter(s=>s.week===w);
@@ -845,7 +903,7 @@ function StoriesTab({month}){
             );
           })}
         </div>
-        {sel&&!editing&&<StoryDetail seq={sel} onClose={()=>setSelected(null)} onStatus={s=>setSt(sel.id,s)} onApproval={s=>setSt(sel.id,s)} comment={comment} setComment={setComment} onAddComment={()=>addC(sel.id)} onEdit={()=>{setEditing(sel.id);setSelected(null);}} onDelete={()=>del(sel.id)}/>}
+        {sel&&!editing&&<div style={{position:"sticky",top:16}}><StoryDetail seq={sel} onClose={()=>setSelected(null)} onStatus={s=>setSt(sel.id,s)} onApproval={s=>setSt(sel.id,s)} comment={comment} setComment={setComment} onAddComment={()=>addC(sel.id)} onEdit={()=>{setEditing(sel.id);setSelected(null);}} onDelete={()=>del(sel.id)}/></div>}
       </div>
     </div>
   );
@@ -856,42 +914,86 @@ function StoriesTab({month}){
 export default function App(){
   const[month,setMonth]=useState("April");
   const[tab,setTab]=useState("Feed Calendar");
+  const[sideOpen,setSideOpen]=useState(false);
+  const isMob=useIsMobile();
+
+  const sidebarContent=(
+    <>
+      <div style={{padding:"0 20px 24px",borderBottom:`1px solid ${BORDER2}`}}>
+        <div style={{width:32,height:2,background:TEAL,borderRadius:1,marginBottom:12}}/>
+        <div style={{fontFamily:IN,fontSize:11,fontWeight:700,color:TX1,letterSpacing:"0.12em",textTransform:"uppercase"}}>Tara Rose</div>
+        <div style={{fontFamily:IN,fontSize:9,fontWeight:600,color:TEAL,letterSpacing:"0.12em",textTransform:"uppercase",marginTop:3}}>Content System</div>
+      </div>
+      <div style={{padding:"20px 12px 12px"}}>
+        <div style={{fontFamily:IN,fontSize:9,fontWeight:600,color:TX3,letterSpacing:"0.1em",textTransform:"uppercase",padding:"0 8px",marginBottom:8}}>Views</div>
+        {NAV_ITEMS.map(item=>{const active=tab===item;return<button key={item} onClick={()=>{setTab(item);setSideOpen(false);}} style={{width:"100%",display:"block",textAlign:"left",padding:"9px 12px",borderRadius:8,border:"none",cursor:"pointer",background:active?`${TEAL}18`:"transparent",color:active?TEAL:TX2,fontFamily:IN,fontSize:13,fontWeight:active?700:600,marginBottom:2}}>{item}</button>;})}
+      </div>
+      <div style={{padding:"8px 12px"}}>
+        <div style={{fontFamily:IN,fontSize:9,fontWeight:600,color:TX3,letterSpacing:"0.1em",textTransform:"uppercase",padding:"0 8px",marginBottom:8}}>Month</div>
+        {MONTHS.map(m=>{const active=month===m;return<button key={m} onClick={()=>{setMonth(m);setSideOpen(false);}} style={{width:"100%",display:"block",textAlign:"left",padding:"7px 12px",borderRadius:8,border:"none",cursor:"pointer",background:active?SURF3:"transparent",color:active?TX1:TX3,fontFamily:IN,fontSize:12,fontWeight:active?700:600,marginBottom:1}}>{m}</button>;})}
+      </div>
+    </>
+  );
+
   return(
     <div style={{display:"flex",minHeight:"100vh",background:BG,fontFamily:IN}}>
       <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,700&family=Inter:wght@600&display=swap" rel="stylesheet"/>
-      <div style={{width:220,flexShrink:0,background:SURF,borderRight:`1px solid ${BORDER}`,display:"flex",flexDirection:"column",padding:"24px 0",overflowY:"auto"}}>
-        <div style={{padding:"0 20px 24px",borderBottom:`1px solid ${BORDER2}`}}>
-          <div style={{width:32,height:2,background:TEAL,borderRadius:1,marginBottom:12}}/>
-          <div style={{fontFamily:IN,fontSize:11,fontWeight:700,color:TX1,letterSpacing:"0.12em",textTransform:"uppercase"}}>Tara Rose</div>
-          <div style={{fontFamily:IN,fontSize:9,fontWeight:600,color:TEAL,letterSpacing:"0.12em",textTransform:"uppercase",marginTop:3}}>Content System</div>
+
+      {/* Desktop sidebar */}
+      {!isMob&&<div style={{width:220,flexShrink:0,background:SURF,borderRight:`1px solid ${BORDER}`,display:"flex",flexDirection:"column",padding:"24px 0",overflowY:"auto"}}>{sidebarContent}</div>}
+
+      {/* Mobile: overlay drawer */}
+      {isMob&&sideOpen&&<div style={{position:"fixed",inset:0,zIndex:100,display:"flex"}}>
+        <div style={{width:240,background:SURF,borderRight:`1px solid ${BORDER}`,display:"flex",flexDirection:"column",padding:"24px 0",overflowY:"auto"}}>
+          <div style={{padding:"0 20px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div style={{fontFamily:IN,fontSize:11,fontWeight:700,color:TX1,letterSpacing:"0.12em",textTransform:"uppercase"}}>Tara Rose</div>
+            <button onClick={()=>setSideOpen(false)} style={{border:"none",background:"none",cursor:"pointer",color:TX3,fontSize:20,lineHeight:1,padding:0}}>×</button>
+          </div>
+          {sidebarContent}
         </div>
-        <div style={{padding:"20px 12px 12px"}}>
-          <div style={{fontFamily:IN,fontSize:9,fontWeight:600,color:TX3,letterSpacing:"0.1em",textTransform:"uppercase",padding:"0 8px",marginBottom:8}}>Views</div>
-          {NAV_ITEMS.map(item=>{const active=tab===item;return<button key={item} onClick={()=>setTab(item)} style={{width:"100%",display:"block",textAlign:"left",padding:"9px 12px",borderRadius:8,border:"none",cursor:"pointer",background:active?`${TEAL}18`:"transparent",color:active?TEAL:TX2,fontFamily:IN,fontSize:13,fontWeight:active?700:600,marginBottom:2}}>{item}</button>;})}
+        <div style={{flex:1,background:"rgba(0,0,0,0.5)"}} onClick={()=>setSideOpen(false)}/>
+      </div>}
+
+      <div style={{flex:1,overflow:"auto",paddingBottom:isMob?80:0}}>
+        {/* Mobile top bar */}
+        {isMob&&<div style={{position:"sticky",top:0,zIndex:40,background:SURF,borderBottom:`1px solid ${BORDER2}`,padding:"12px 16px",display:"flex",alignItems:"center",gap:12}}>
+          <button onClick={()=>setSideOpen(true)} style={{border:"none",background:"none",cursor:"pointer",color:TX2,padding:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <div style={{flex:1}}>
+            <div style={{fontFamily:IN,fontSize:13,fontWeight:700,color:TX1}}>{tab}</div>
+            <div style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX3}}>{month}</div>
+          </div>
+        </div>}
+
+        <div style={{padding:isMob?"16px 14px":"32px 28px"}}>
+          {!isMob&&<div style={{marginBottom:28}}>
+            <Label>Content System · 2026</Label>
+            <SectionRule color={TEAL}/>
+            <HL size={32}>{tab}</HL>
+            <div style={{fontFamily:IN,fontSize:12,fontWeight:600,color:TX3,marginTop:6}}>{month} · Four locations · Dubai and Abu Dhabi</div>
+          </div>}
+          <div key={month+tab}>
+            {tab==="Feed Calendar"&&<FeedTab month={month}/>}
+            {tab==="Stories"&&<StoriesTab month={month}/>}
+            {tab==="Analytics"&&(
+              <div style={{textAlign:"center",padding:"80px 20px",border:`1px dashed ${BORDER}`,borderRadius:12}}>
+                <SectionRule color={PURPLE}/>
+                <div style={{fontFamily:PF,fontWeight:700,fontStyle:"italic",fontSize:22,color:TX3,marginBottom:8}}>Analytics</div>
+                <div style={{fontFamily:IN,fontSize:13,fontWeight:600,color:TX4}}>Coming soon.</div>
+              </div>
+            )}
+          </div>
         </div>
-        <div style={{padding:"8px 12px"}}>
-          <div style={{fontFamily:IN,fontSize:9,fontWeight:600,color:TX3,letterSpacing:"0.1em",textTransform:"uppercase",padding:"0 8px",marginBottom:8}}>Month</div>
-          {MONTHS.map(m=>{const active=month===m;return<button key={m} onClick={()=>setMonth(m)} style={{width:"100%",display:"block",textAlign:"left",padding:"7px 12px",borderRadius:8,border:"none",cursor:"pointer",background:active?SURF3:"transparent",color:active?TX1:TX3,fontFamily:IN,fontSize:12,fontWeight:active?700:600,marginBottom:1}}>{m}</button>;})}
-        </div>
-      </div>
-      <div style={{flex:1,overflow:"auto",padding:"32px 28px"}}>
-        <div style={{marginBottom:28}}>
-          <Label>Content System · 2026</Label>
-          <SectionRule color={TEAL}/>
-          <HL size={32}>{tab}</HL>
-          <div style={{fontFamily:IN,fontSize:12,fontWeight:600,color:TX3,marginTop:6}}>{month} · Four locations · Dubai and Abu Dhabi</div>
-        </div>
-        <div key={month+tab}>
-          {tab==="Feed Calendar"&&<FeedTab month={month}/>}
-          {tab==="Stories"&&<StoriesTab month={month}/>}
-          {tab==="Analytics"&&(
-            <div style={{textAlign:"center",padding:"80px 20px",border:`1px dashed ${BORDER}`,borderRadius:12}}>
-              <SectionRule color={PURPLE}/>
-              <div style={{fontFamily:PF,fontWeight:700,fontStyle:"italic",fontSize:22,color:TX3,marginBottom:8}}>Analytics</div>
-              <div style={{fontFamily:IN,fontSize:13,fontWeight:600,color:TX4}}>Coming soon — connect to Supabase to unlock performance data.</div>
-            </div>
-          )}
-        </div>
+
+        {/* Mobile bottom nav */}
+        {isMob&&<div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:40,background:SURF,borderTop:`1px solid ${BORDER2}`,display:"flex",padding:"8px 0 max(8px,env(safe-area-inset-bottom))"}}>
+          {NAV_ITEMS.map(item=>{const active=tab===item;return(
+            <button key={item} onClick={()=>setTab(item)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3,border:"none",background:"none",cursor:"pointer",padding:"6px 4px",color:active?TEAL:TX4}}>
+              <div style={{fontFamily:IN,fontSize:10,fontWeight:active?700:600,letterSpacing:"0.03em"}}>{item}</div>
+            </button>
+          );})}
+        </div>}
       </div>
     </div>
   );
