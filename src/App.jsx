@@ -274,9 +274,10 @@ function Comments({comments,val,setVal,onAdd}){
 }
 
 function PillarTracker({items}){
+  const isMob=useIsMobile();
   const total=items.length||1;
   return(
-    <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10,marginBottom:24}}>
+    <div style={{display:"grid",gridTemplateColumns:isMob?"repeat(2,1fr)":"repeat(5,1fr)",gap:10,marginBottom:16}}>
       {PILLARS.map(p=>{
         const count=items.filter(x=>x.pillar===p.name).length;
         const actual=Math.round((count/total)*100);
@@ -296,8 +297,9 @@ function PillarTracker({items}){
 }
 
 function Shell({title,rule,onCancel,onSave,saveLabel,saving,children}){
+  const isMob=useIsMobile();
   return(
-    <div style={{background:SURF,border:`1px solid ${BORDER}`,borderRadius:12,padding:"22px 24px",marginBottom:18}}>
+    <div style={{background:SURF,border:`1px solid ${BORDER}`,borderRadius:12,padding:isMob?"16px 14px":"22px 24px",marginBottom:18}}>
       <SectionRule color={rule||TEAL}/><HL size={18}>{title}</HL>
       <div style={{height:1,background:BORDER2,margin:"16px 0"}}/>
       {children}
@@ -320,15 +322,15 @@ function ContentStats({items,label}){
     return{...p,count,actual,target,targetCount,diff};
   });
   return(
-    <div style={{marginBottom:14,border:`1px solid ${BORDER}`,borderRadius:10,padding:"12px 16px",background:SURF}}>
+    <div style={{marginBottom:14,border:`1px solid ${BORDER}`,borderLeft:`3px solid ${TEAL}`,borderRadius:10,padding:"12px 16px",background:SURF2}}>
       <div style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:6,marginBottom:10}}>
-        <span style={{fontFamily:IN,fontSize:10,fontWeight:700,color:TX3,letterSpacing:"0.08em",textTransform:"uppercase",marginRight:4}}>{label}</span>
-        <span style={{fontFamily:IN,fontSize:11,fontWeight:700,color:TX1,background:SURF2,borderRadius:20,padding:"3px 10px",border:`1px solid ${BORDER}`}}>{total} total</span>
+        <span style={{fontFamily:IN,fontSize:10,fontWeight:700,color:TEAL,letterSpacing:"0.08em",textTransform:"uppercase",marginRight:4}}>{label}</span>
+        <span style={{fontFamily:IN,fontSize:12,fontWeight:700,color:TX1,background:SURF3,borderRadius:20,padding:"4px 12px",border:`1px solid ${BORDER}`}}>{total} total</span>
         {STATUSES.map(s=>{
           const count=items.filter(x=>x.status===s).length;
           if(!count) return null;
           const ss=getSS(s);
-          return<span key={s} style={{fontFamily:IN,fontSize:11,fontWeight:700,color:ss.color,background:ss.bg,borderRadius:20,padding:"3px 10px",border:`1px solid ${ss.border}`}}>{count} {s.toLowerCase()}</span>;
+          return<span key={s} style={{fontFamily:IN,fontSize:12,fontWeight:700,color:ss.color,background:ss.bg,borderRadius:20,padding:"4px 12px",border:`1px solid ${ss.border}`}}>{count} {s.toLowerCase()}</span>;
         })}
       </div>
       {total>0?(
@@ -360,6 +362,7 @@ function PostForm({onAdd,onCancel,type,month}){
   const[d,setD]=useState(blank);
   const[saving,setSaving]=useState(false);
   const u=(k,v)=>setD(x=>({...x,[k]:v}));
+  const isMob=useIsMobile();
   const ss=getSS(d.status);
   const save=async()=>{
     if(type==="feed"&&!d.subject.trim()){alert("Please add a subject.");return;}
@@ -379,13 +382,13 @@ function PostForm({onAdd,onCancel,type,month}){
   };
   return(
     <Shell title={type==="feed"?"New feed post":"New story sequence"} onCancel={onCancel} onSave={save} saveLabel="Save post" saving={saving}>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:4}}>
+      <div style={{display:"grid",gridTemplateColumns:isMob?"1fr":"1fr 1fr 1fr",gap:10,marginBottom:4}}>
         <FRow label="Week"><Sel value={d.week} onChange={v=>u("week",v)}>{WEEKS.map(w=><option key={w} value={w}>Week {w}</option>)}</Sel></FRow>
         <FRow label="Day"><Sel value={d.day} onChange={v=>u("day",v)}>{DAYS.map(x=><option key={x}>{x}</option>)}</Sel></FRow>
         {type==="feed"?<FRow label="Format"><Sel value={d.format} onChange={v=>u("format",v)}>{FORMATS.map(x=><option key={x}>{x}</option>)}</Sel></FRow>
           :<FRow label="Story type"><Sel value={d.type} onChange={v=>u("type",v)}>{STORY_TYPES.map(x=><option key={x}>{x}</option>)}</Sel></FRow>}
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
+      <div style={{display:"grid",gridTemplateColumns:isMob?"1fr":"1fr 1fr",gap:10,marginBottom:4}}>
         <FRow label="Pillar"><Sel value={d.pillar} onChange={v=>u("pillar",v)}>{PILLARS.map(p=><option key={p.name}>{p.name}</option>)}</Sel></FRow>
         <FRow label="Status"><select value={d.status} onChange={e=>u("status",e.target.value)} style={{width:"100%",fontFamily:IN,fontWeight:700,fontSize:13,padding:"9px 10px",borderRadius:8,border:`1px solid ${ss.border}`,background:ss.bg,color:ss.color,boxSizing:"border-box"}}>{STATUSES.map(x=><option key={x}>{x}</option>)}</select></FRow>
       </div>
@@ -407,6 +410,7 @@ function EditForm({post,onSave,onCancel,type}){
   const[d,setD]=useState({...post,images:post.images||[],video:post.video||[]});
   const[saving,setSaving]=useState(false);
   const u=(k,v)=>setD(x=>({...x,[k]:v}));
+  const isMob=useIsMobile();
   const ss=getSS(d.status);
   const save=async()=>{
     setSaving(true);
@@ -425,13 +429,13 @@ function EditForm({post,onSave,onCancel,type}){
   };
   return(
     <Shell title="Edit post" rule={GREEN} onCancel={onCancel} onSave={save} saveLabel="Save changes" saving={saving}>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:4}}>
+      <div style={{display:"grid",gridTemplateColumns:isMob?"1fr":"1fr 1fr 1fr",gap:10,marginBottom:4}}>
         <FRow label="Week"><Sel value={d.week} onChange={v=>u("week",v)}>{WEEKS.map(w=><option key={w} value={w}>Week {w}</option>)}</Sel></FRow>
         <FRow label="Day"><Sel value={d.day} onChange={v=>u("day",v)}>{DAYS.map(x=><option key={x}>{x}</option>)}</Sel></FRow>
         {type==="feed"?<FRow label="Format"><Sel value={d.format} onChange={v=>u("format",v)}>{FORMATS.map(x=><option key={x}>{x}</option>)}</Sel></FRow>
           :<FRow label="Story type"><Sel value={d.type} onChange={v=>u("type",v)}>{STORY_TYPES.map(x=><option key={x}>{x}</option>)}</Sel></FRow>}
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
+      <div style={{display:"grid",gridTemplateColumns:isMob?"1fr":"1fr 1fr",gap:10,marginBottom:4}}>
         <FRow label="Pillar"><Sel value={d.pillar} onChange={v=>u("pillar",v)}>{PILLARS.map(p=><option key={p.name}>{p.name}</option>)}</Sel></FRow>
         <FRow label="Status"><select value={d.status} onChange={e=>u("status",e.target.value)} style={{width:"100%",fontFamily:IN,fontWeight:700,fontSize:13,padding:"9px 10px",borderRadius:8,border:`1px solid ${ss.border}`,background:ss.bg,color:ss.color,boxSizing:"border-box"}}>{STATUSES.map(x=><option key={x}>{x}</option>)}</select></FRow>
       </div>
@@ -460,7 +464,7 @@ function PostDetail({post,onClose,onStatus,onApproval,comment,setComment,onAddCo
   const hasMedia=hasVideo||hasImage;
   const mediaFiles=hasVideo?videoFiles:imgFiles;
   return(
-    <div style={{background:SURF,border:`1px solid ${BORDER}`,borderRadius:12,overflow:"hidden",maxHeight:"calc(100vh - 80px)",overflowY:"auto"}}>
+    <div style={{background:SURF,border:`1px solid ${BORDER}`,borderRadius:12,overflow:"hidden"}}>
       <div style={{padding:"14px 18px",borderBottom:`1px solid ${BORDER2}`,display:"flex",justifyContent:"space-between",alignItems:"center",background:SURF2}}>
         <div><SectionRule color={TEAL}/><HL size={15}>Post detail</HL></div>
         <button onClick={onClose} style={{fontSize:20,border:"none",background:"none",cursor:"pointer",color:TX3,lineHeight:1,fontFamily:IN}}>×</button>
@@ -517,7 +521,7 @@ function StoryDetail({seq,onClose,onStatus,onApproval,comment,setComment,onAddCo
   const pl=getPillar(seq.pillar);
   const imgs=seq.images||[];
   return(
-    <div style={{background:SURF,border:`1px solid ${BORDER}`,borderRadius:12,overflow:"hidden",maxHeight:"calc(100vh - 80px)",overflowY:"auto"}}>
+    <div style={{background:SURF,border:`1px solid ${BORDER}`,borderRadius:12,overflow:"hidden"}}>
       <div style={{padding:"14px 18px",borderBottom:`1px solid ${BORDER2}`,display:"flex",justifyContent:"space-between",alignItems:"center",background:SURF2}}>
         <div><SectionRule color={PURPLE}/><HL size={15}>Story sequence</HL></div>
         <button onClick={onClose} style={{fontSize:20,border:"none",background:"none",cursor:"pointer",color:TX3,fontFamily:IN}}>×</button>
@@ -570,9 +574,9 @@ function StoryDetail({seq,onClose,onStatus,onApproval,comment,setComment,onAddCo
 // ── IG Grid ───────────────────────────────────────────────────────
 
 function IgGrid({posts,selected,onSelect}){
-  const[zoom,setZoom]=useState(0);
-  const ZOOM_COLS=[3,4,5,6,9];
-  const cols=ZOOM_COLS[zoom];
+  const[zoom,setZoom]=useState(1);
+  const ZOOM_ASPECT=["1/1","4/5","3/4","2/3","9/16"];
+  const cellAspect=ZOOM_ASPECT[zoom];
   const ordered=sortNewestFirst(posts);
   return(
     <div style={{background:SURF,borderRadius:12,padding:14,border:`1px solid ${BORDER}`}}>
@@ -581,12 +585,12 @@ function IgGrid({posts,selected,onSelect}){
         <div><div style={{fontFamily:IN,fontSize:13,fontWeight:700,color:TX1}}>tararosesalon</div><div style={{fontFamily:IN,fontSize:11,fontWeight:600,color:TX3}}>Premium hair · UAE</div></div>
         <div style={{marginLeft:"auto",display:"flex",gap:4,alignItems:"center"}}>
           <span style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX4,marginRight:2}}>zoom</span>
-          <button onClick={()=>setZoom(z=>Math.max(0,z-1))} disabled={zoom===0} title="Fewer columns — zoom in" style={{width:26,height:26,borderRadius:6,border:`1px solid ${BORDER}`,background:zoom===0?SURF:SURF2,color:zoom===0?TX4:TX2,fontFamily:IN,fontSize:14,fontWeight:700,cursor:zoom===0?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>−</button>
-          <span style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX4,minWidth:18,textAlign:"center"}}>{cols}</span>
-          <button onClick={()=>setZoom(z=>Math.min(4,z+1))} disabled={zoom===4} title="More columns — see full grid" style={{width:26,height:26,borderRadius:6,border:`1px solid ${BORDER}`,background:zoom===4?SURF:SURF2,color:zoom===4?TX4:TX2,fontFamily:IN,fontSize:14,fontWeight:700,cursor:zoom===4?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>+</button>
+          <button onClick={()=>setZoom(z=>Math.max(0,z-1))} disabled={zoom===0} title="Zoom out — see more rows" style={{width:26,height:26,borderRadius:6,border:`1px solid ${BORDER}`,background:zoom===0?SURF:SURF2,color:zoom===0?TX4:TX2,fontFamily:IN,fontSize:14,fontWeight:700,cursor:zoom===0?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>−</button>
+          <span style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX4,minWidth:18,textAlign:"center"}}>{zoom+1}</span>
+          <button onClick={()=>setZoom(z=>Math.min(4,z+1))} disabled={zoom===4} title="Zoom in — larger cells" style={{width:26,height:26,borderRadius:6,border:`1px solid ${BORDER}`,background:zoom===4?SURF:SURF2,color:zoom===4?TX4:TX2,fontFamily:IN,fontSize:14,fontWeight:700,cursor:zoom===4?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>+</button>
         </div>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:`repeat(${cols},1fr)`,gap:2}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:2}}>
         {ordered.map(p=>{
           const pl=getPillar(p.pillar);
           const isDraft=p.status==="Draft";
@@ -595,7 +599,7 @@ function IgGrid({posts,selected,onSelect}){
           const hasThumb=!!thumb;
           return(
             <div key={p.id} onClick={()=>onSelect(p.id)}
-              style={{aspectRatio:"4/5",background:pl.bg,cursor:"pointer",overflow:"hidden",position:"relative",outline:selected===p.id?`2px solid ${TEAL}`:"2px solid transparent"}}>
+              style={{aspectRatio:cellAspect,background:pl.bg,cursor:"pointer",overflow:"hidden",position:"relative",outline:selected===p.id?`2px solid ${TEAL}`:"2px solid transparent"}}>
               {hasThumb&&<img src={thumb.url} alt="" style={{width:"100%",height:"100%",objectFit:"cover",position:"absolute",inset:0}}/>}
               {!hasThumb&&(
                 <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:6,gap:3}}>
@@ -619,10 +623,11 @@ function IgGrid({posts,selected,onSelect}){
 // ── Filter Bar ────────────────────────────────────────────────────
 
 function FilterBar({filter,setFilter,view,setView,onAdd}){
+  const isMob=useIsMobile();
   return(
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:isMob?"flex-start":"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
       {view==="calendar"?(
-        <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+        <div style={{display:"flex",gap:5,flexWrap:"wrap",overflowX:isMob?"auto":"unset"}}>
           {["All",...STATUSES].map(s=>{
             const ss=s==="All"?{bg:SURF2,color:TX3,border:BORDER}:getSS(s);
             const active=filter===s;
@@ -779,7 +784,7 @@ function FeedTab({month}){
             })
           ):<IgGrid posts={posts} selected={selected} onSelect={id=>{setSelected(selected===id?null:id);setEditing(null);}}/>}
         </div>
-        {sel&&!editing&&<div style={{position:"sticky",top:16}}><PostDetail post={sel} onClose={()=>setSelected(null)} onStatus={s=>setSt(sel.id,s)} onApproval={s=>setSt(sel.id,s)} comment={comment} setComment={setComment} onAddComment={()=>addC(sel.id)} onEdit={()=>{setEditing(sel.id);setSelected(null);}} onDelete={()=>del(sel.id)}/></div>}
+        {sel&&!editing&&<div><PostDetail post={sel} onClose={()=>setSelected(null)} onStatus={s=>setSt(sel.id,s)} onApproval={s=>setSt(sel.id,s)} comment={comment} setComment={setComment} onAddComment={()=>addC(sel.id)} onEdit={()=>{setEditing(sel.id);setSelected(null);}} onDelete={()=>del(sel.id)}/></div>}
       </div>
     </div>
   );
@@ -879,6 +884,28 @@ function StoriesTab({month}){
                     const pl=getPillar(s.pillar);
                     const thumb=(s.images||[])[0]||null;
                     const isRepost=s.type==="Repost from feed";
+                    if(isMob) return(
+                      <div key={s.id} onClick={()=>{setSelected(selected===s.id?null:s.id);setEditing(null);}}
+                        style={{display:"flex",gap:10,alignItems:"center",padding:"10px 12px",borderRadius:10,border:`1px solid ${selected===s.id?TEAL:BORDER}`,background:selected===s.id?`${TEAL}0D`:SURF,cursor:"pointer"}}>
+                        <div style={{width:38,height:38,borderRadius:7,overflow:"hidden",background:pl.bg,border:`1px solid ${BORDER}`,flexShrink:0}}>
+                          {thumb?<img src={thumb.url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                            :<div style={{width:"100%",height:"100%",background:pl.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:IN,fontSize:9,fontWeight:700,color:pl.color}}>S</div>}
+                        </div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontFamily:IN,fontSize:12,fontWeight:600,color:TX2,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{(s.frames||"").split("\n")[0]||<span style={{color:TX4,fontStyle:"italic"}}>No frames</span>}</div>
+                          <div style={{display:"flex",gap:6,marginTop:4,flexWrap:"wrap"}}>
+                            <StatusPill status={s.status}/>
+                            <span style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX3}}>{s.day} · W{s.week} · {isRepost?"repost":"unique"}</span>
+                          </div>
+                        </div>
+                        <div style={{display:"flex",gap:6,flexShrink:0}}>
+                          <button onClick={e=>{e.stopPropagation();dup(s.id);}} title="Duplicate" style={{border:"none",background:"none",cursor:"pointer",color:TX4,padding:4,lineHeight:1,display:"flex",alignItems:"center"}}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                          </button>
+                          <button onClick={e=>{e.stopPropagation();del(s.id);}} style={{fontFamily:IN,fontSize:15,border:"none",background:"none",cursor:"pointer",color:TX4,padding:"0 2px",lineHeight:1}}>×</button>
+                        </div>
+                      </div>
+                    );
                     return(
                       <div key={s.id} onClick={()=>{setSelected(selected===s.id?null:s.id);setEditing(null);}}
                         style={{display:"grid",gridTemplateColumns:"44px 44px 100px 100px 1fr 62px 22px 22px",gap:8,alignItems:"center",padding:"10px 14px",borderRadius:10,border:`1px solid ${selected===s.id?TEAL:BORDER}`,background:selected===s.id?`${TEAL}0D`:SURF,cursor:"pointer"}}>
@@ -903,7 +930,7 @@ function StoriesTab({month}){
             );
           })}
         </div>
-        {sel&&!editing&&<div style={{position:"sticky",top:16}}><StoryDetail seq={sel} onClose={()=>setSelected(null)} onStatus={s=>setSt(sel.id,s)} onApproval={s=>setSt(sel.id,s)} comment={comment} setComment={setComment} onAddComment={()=>addC(sel.id)} onEdit={()=>{setEditing(sel.id);setSelected(null);}} onDelete={()=>del(sel.id)}/></div>}
+        {sel&&!editing&&<div><StoryDetail seq={sel} onClose={()=>setSelected(null)} onStatus={s=>setSt(sel.id,s)} onApproval={s=>setSt(sel.id,s)} comment={comment} setComment={setComment} onAddComment={()=>addC(sel.id)} onEdit={()=>{setEditing(sel.id);setSelected(null);}} onDelete={()=>del(sel.id)}/></div>}
       </div>
     </div>
   );
