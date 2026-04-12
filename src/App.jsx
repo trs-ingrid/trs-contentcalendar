@@ -27,7 +27,8 @@ const FORMATS   = ["Reel","Carousel","Static","Testimonial","Story Reel"];
 const WEEKS     = ["1","2","3","4"];
 const STATUSES  = ["Draft","For Review","Approved","For Revision","Uploaded"];
 const STORY_TYPES = ["Unique — BTS moment","Unique — Poll / Quiz","Unique — Behind the chair","Unique — Team feature","Unique — Offer / Giveaway","Unique — Client reaction","Unique — Education","Repost from feed"];
-const GRID_ZOOM_ASPECTS = ["1/1","4/5","3/4","2/3","9/16"];
+// zoom=0 → all rows (full zoom out); zoom=4 → 2 rows (full zoom in)
+const GRID_ZOOM_ROWS = [null,9,5,3,2];
 const NAV_ITEMS = ["Feed Calendar","Stories","Analytics"];
 
 const PF="'Playfair Display',Georgia,serif";
@@ -314,37 +315,48 @@ function Shell({title,rule,onCancel,onSave,saveLabel,saving,children}){
 
 function ContentStats({items,label}){
   const total=items.length;
+  const isMob=useIsMobile();
   const pillarAnalysis=PILLARS.map(p=>{
     const count=items.filter(x=>x.pillar===p.name).length;
     const actual=total>0?Math.round((count/total)*100):0;
     const target=PILLAR_TARGETS[p.name];
     const targetCount=total>0?Math.round(total*target/100):0;
-    const diff=count-targetCount;
+    const diff=count-targetCount; // positive = too many, negative = need more
     return{...p,count,actual,target,targetCount,diff};
   });
   return(
-    <div style={{marginBottom:14,border:`1px solid ${BORDER}`,borderLeft:`3px solid ${TEAL}`,borderRadius:10,padding:"12px 16px",background:SURF2}}>
-      <div style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:6,marginBottom:10}}>
-        <span style={{fontFamily:IN,fontSize:10,fontWeight:700,color:TEAL,letterSpacing:"0.08em",textTransform:"uppercase",marginRight:4}}>{label}</span>
-        <span style={{fontFamily:IN,fontSize:12,fontWeight:700,color:TX1,background:SURF3,borderRadius:20,padding:"4px 12px",border:`1px solid ${BORDER}`}}>{total} total</span>
+    <div style={{marginBottom:14,border:`1px solid ${BORDER}`,borderLeft:`3px solid ${TEAL}`,borderRadius:10,padding:"14px 16px",background:SURF2}}>
+      {/* Status counts row */}
+      <div style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:6,marginBottom:12}}>
+        <span style={{fontFamily:IN,fontSize:10,fontWeight:700,color:TEAL,letterSpacing:"0.1em",textTransform:"uppercase",marginRight:2}}>{label}</span>
+        <span style={{fontFamily:IN,fontSize:13,fontWeight:700,color:TX1,background:SURF3,borderRadius:20,padding:"4px 14px",border:`1px solid ${BORDER}`}}>{total} total</span>
         {STATUSES.map(s=>{
           const count=items.filter(x=>x.status===s).length;
           if(!count) return null;
           const ss=getSS(s);
-          return<span key={s} style={{fontFamily:IN,fontSize:12,fontWeight:700,color:ss.color,background:ss.bg,borderRadius:20,padding:"4px 12px",border:`1px solid ${ss.border}`}}>{count} {s.toLowerCase()}</span>;
+          return<span key={s} style={{fontFamily:IN,fontSize:13,fontWeight:700,color:ss.color,background:ss.bg,borderRadius:20,padding:"4px 14px",border:`1px solid ${ss.border}`}}>{count} {s}</span>;
         })}
       </div>
+      {/* Pillar gap analysis */}
       {total>0?(
-        <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+        <div style={{display:"grid",gridTemplateColumns:isMob?"1fr 1fr":"repeat(5,1fr)",gap:6}}>
           {pillarAnalysis.map(p=>{
             const ok=Math.abs(p.diff)<=1;
-            const needMore=p.diff<-1;
+            const needMore=p.diff<-1;  // count is below target
+            const tooMany=p.diff>1;     // count is above target
+            const accentColor=ok?p.color:needMore?CORAL:"#7BC67E";
+            const cardBg=ok?`${p.bg}28`:needMore?`${CORAL}20`:`${"#7BC67E"}18`;
+            const cardBorder=ok?`${p.bg}`:needMore?CORAL:"#7BC67E";
             return(
-              <div key={p.name} style={{display:"flex",alignItems:"center",gap:4,borderRadius:7,padding:"4px 9px",background:ok?`${p.bg}33`:needMore?`${CORAL}18`:`${GREEN}18`,border:`1px solid ${ok?p.bg+"55":needMore?`${CORAL}44`:`${GREEN}44`}`}}>
-                <span style={{fontFamily:IN,fontSize:10,fontWeight:700,color:ok?p.color:needMore?CORAL:"#A8D672"}}>{p.name}</span>
-                <span style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX3}}>{p.actual}%</span>
-                {needMore&&<span style={{fontFamily:IN,fontSize:9,fontWeight:700,color:CORAL}}>↑ need {Math.abs(p.diff)} more</span>}
-                {!ok&&!needMore&&<span style={{fontFamily:IN,fontSize:9,fontWeight:700,color:"#A8D672"}}>↓ reduce by {p.diff}</span>}
+              <div key={p.name} style={{borderRadius:8,padding:"8px 10px",background:cardBg,border:`1px solid ${cardBorder}55`}}>
+                <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:4}}>
+                  <div style={{width:8,height:8,borderRadius:"50%",background:accentColor,flexShrink:0}}/>
+                  <span style={{fontFamily:IN,fontSize:10,fontWeight:700,color:accentColor,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{p.name}</span>
+                </div>
+                <div style={{fontFamily:IN,fontSize:16,fontWeight:700,color:TX1,lineHeight:1,marginBottom:3}}>{p.actual}%</div>
+                <div style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX3,marginBottom:needMore||tooMany?4:0}}>target {p.target}% · {p.count}/{p.targetCount}</div>
+                {needMore&&<div style={{fontFamily:IN,fontSize:11,fontWeight:700,color:CORAL}}>↑ need {Math.abs(p.diff)} more</div>}
+                {tooMany&&<div style={{fontFamily:IN,fontSize:11,fontWeight:700,color:"#7BC67E"}}>↓ reduce by {p.diff}</div>}
               </div>
             );
           })}
@@ -575,8 +587,20 @@ function StoryDetail({seq,onClose,onStatus,onApproval,comment,setComment,onAddCo
 // ── IG Grid ───────────────────────────────────────────────────────
 
 function IgGrid({posts,selected,onSelect}){
-  const[zoom,setZoom]=useState(1);
-  const cellAspect=GRID_ZOOM_ASPECTS[zoom];
+  const[zoom,setZoom]=useState(2);
+  const[rowH,setRowH]=useState(200);
+  const gridWrapRef=useRef(null);
+  useEffect(()=>{
+    const el=gridWrapRef.current;
+    if(!el) return;
+    const measure=()=>{const w=el.offsetWidth;if(w>0) setRowH((w-4)/3*(5/4)+2);};
+    measure();
+    const ro=new ResizeObserver(measure);
+    ro.observe(el);
+    return()=>ro.disconnect();
+  },[]);
+  const visRows=GRID_ZOOM_ROWS[zoom];
+  const gridMaxH=visRows?visRows*rowH-2:undefined;
   const ordered=sortNewestFirst(posts);
   return(
     <div style={{background:SURF,borderRadius:12,padding:14,border:`1px solid ${BORDER}`}}>
@@ -584,12 +608,13 @@ function IgGrid({posts,selected,onSelect}){
         <div style={{width:36,height:36,borderRadius:"50%",background:SURF3,border:`1px solid ${BORDER}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontFamily:IN,fontWeight:700,color:TEAL}}>TR</div>
         <div><div style={{fontFamily:IN,fontSize:13,fontWeight:700,color:TX1}}>tararosesalon</div><div style={{fontFamily:IN,fontSize:11,fontWeight:600,color:TX3}}>Premium hair · UAE</div></div>
         <div style={{marginLeft:"auto",display:"flex",gap:4,alignItems:"center"}}>
-          <span style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX4,marginRight:2}}>zoom</span>
-          <button onClick={()=>setZoom(z=>Math.max(0,z-1))} disabled={zoom===0} title="Zoom out — see more rows" style={{width:26,height:26,borderRadius:6,border:`1px solid ${BORDER}`,background:zoom===0?SURF:SURF2,color:zoom===0?TX4:TX2,fontFamily:IN,fontSize:14,fontWeight:700,cursor:zoom===0?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>−</button>
-          <span style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX4,minWidth:18,textAlign:"center"}}>{zoom+1}</span>
-          <button onClick={()=>setZoom(z=>Math.min(4,z+1))} disabled={zoom===4} title="Zoom in — larger cells" style={{width:26,height:26,borderRadius:6,border:`1px solid ${BORDER}`,background:zoom===4?SURF:SURF2,color:zoom===4?TX4:TX2,fontFamily:IN,fontSize:14,fontWeight:700,cursor:zoom===4?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>+</button>
+          <span style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX4,marginRight:2}}>rows</span>
+          <button onClick={()=>setZoom(z=>Math.max(0,z-1))} disabled={zoom===0} title="Show more rows" style={{width:26,height:26,borderRadius:6,border:`1px solid ${BORDER}`,background:zoom===0?SURF:SURF2,color:zoom===0?TX4:TX2,fontFamily:IN,fontSize:14,fontWeight:700,cursor:zoom===0?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>−</button>
+          <span style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX4,minWidth:24,textAlign:"center"}}>{visRows||"all"}</span>
+          <button onClick={()=>setZoom(z=>Math.min(4,z+1))} disabled={zoom===4} title="Show fewer rows" style={{width:26,height:26,borderRadius:6,border:`1px solid ${BORDER}`,background:zoom===4?SURF:SURF2,color:zoom===4?TX4:TX2,fontFamily:IN,fontSize:14,fontWeight:700,cursor:zoom===4?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>+</button>
         </div>
       </div>
+      <div ref={gridWrapRef} style={{overflow:"hidden",maxHeight:gridMaxH}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:2}}>
         {ordered.map(p=>{
           const pl=getPillar(p.pillar);
@@ -599,7 +624,7 @@ function IgGrid({posts,selected,onSelect}){
           const hasThumb=!!thumb;
           return(
             <div key={p.id} onClick={()=>onSelect(p.id)}
-              style={{aspectRatio:cellAspect,background:pl.bg,cursor:"pointer",overflow:"hidden",position:"relative",outline:selected===p.id?`2px solid ${TEAL}`:"2px solid transparent"}}>
+              style={{aspectRatio:"4/5",background:pl.bg,cursor:"pointer",overflow:"hidden",position:"relative",outline:selected===p.id?`2px solid ${TEAL}`:"2px solid transparent"}}>
               {hasThumb&&<img src={thumb.url} alt="" style={{width:"100%",height:"100%",objectFit:"cover",position:"absolute",inset:0}}/>}
               {!hasThumb&&(
                 <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:6,gap:3}}>
@@ -615,7 +640,8 @@ function IgGrid({posts,selected,onSelect}){
         })}
         {ordered.length===0&&<div style={{gridColumn:"1/-1",textAlign:"center",padding:"40px 20px",fontFamily:IN,fontSize:12,fontWeight:600,color:TX4}}>No posts yet</div>}
       </div>
-      <div style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX4,textAlign:"center",marginTop:10,letterSpacing:"0.06em",textTransform:"uppercase"}}>{ordered.length} posts · newest first · pillar colours</div>
+      </div>
+      <div style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX4,textAlign:"center",marginTop:10,letterSpacing:"0.06em",textTransform:"uppercase"}}>{ordered.length} posts · {visRows?"showing "+visRows+" rows":"all rows"} · pillar colours</div>
     </div>
   );
 }
@@ -732,6 +758,12 @@ function FeedTab({month}){
   };
   const isMob=useIsMobile();
   const toggleWeek=w=>setCollapsedWeeks(c=>({...c,[w]:!c[w]}));
+  const detailRef=useRef(null);
+  useEffect(()=>{
+    if(selected&&detailRef.current&&!isMob){
+      detailRef.current.scrollIntoView({behavior:"smooth",block:"start"});
+    }
+  },[selected]);
 
   return(
     <div>
@@ -784,7 +816,7 @@ function FeedTab({month}){
             })
           ):<IgGrid posts={posts} selected={selected} onSelect={id=>{setSelected(selected===id?null:id);setEditing(null);}}/>}
         </div>
-        {sel&&!editing&&<div><PostDetail post={sel} onClose={()=>setSelected(null)} onStatus={s=>setSt(sel.id,s)} onApproval={s=>setSt(sel.id,s)} comment={comment} setComment={setComment} onAddComment={()=>addC(sel.id)} onEdit={()=>{setEditing(sel.id);setSelected(null);}} onDelete={()=>del(sel.id)}/></div>}
+        {sel&&!editing&&<div ref={detailRef}><PostDetail post={sel} onClose={()=>setSelected(null)} onStatus={s=>setSt(sel.id,s)} onApproval={s=>setSt(sel.id,s)} comment={comment} setComment={setComment} onAddComment={()=>addC(sel.id)} onEdit={()=>{setEditing(sel.id);setSelected(null);}} onDelete={()=>del(sel.id)}/></div>}
       </div>
     </div>
   );
@@ -827,6 +859,12 @@ function StoriesTab({month}){
   };
   const isMob=useIsMobile();
   const toggleWeek=w=>setCollapsedWeeks(c=>({...c,[w]:!c[w]}));
+  const detailRef=useRef(null);
+  useEffect(()=>{
+    if(selected&&detailRef.current&&!isMob){
+      detailRef.current.scrollIntoView({behavior:"smooth",block:"start"});
+    }
+  },[selected]);
 
   return(
     <div>
@@ -930,7 +968,7 @@ function StoriesTab({month}){
             );
           })}
         </div>
-        {sel&&!editing&&<div><StoryDetail seq={sel} onClose={()=>setSelected(null)} onStatus={s=>setSt(sel.id,s)} onApproval={s=>setSt(sel.id,s)} comment={comment} setComment={setComment} onAddComment={()=>addC(sel.id)} onEdit={()=>{setEditing(sel.id);setSelected(null);}} onDelete={()=>del(sel.id)}/></div>}
+        {sel&&!editing&&<div ref={detailRef}><StoryDetail seq={sel} onClose={()=>setSelected(null)} onStatus={s=>setSt(sel.id,s)} onApproval={s=>setSt(sel.id,s)} comment={comment} setComment={setComment} onAddComment={()=>addC(sel.id)} onEdit={()=>{setEditing(sel.id);setSelected(null);}} onDelete={()=>del(sel.id)}/></div>}
       </div>
     </div>
   );
