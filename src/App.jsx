@@ -27,8 +27,8 @@ const FORMATS   = ["Reel","Carousel","Static","Testimonial","Story Reel"];
 const WEEKS     = ["1","2","3","4"];
 const STATUSES  = ["Draft","For Review","Approved","For Revision","Uploaded"];
 const STORY_TYPES = ["Unique — BTS moment","Unique — Poll / Quiz","Unique — Behind the chair","Unique — Team feature","Unique — Offer / Giveaway","Unique — Client reaction","Unique — Education","Repost from feed"];
-// zoom=0 → smallest cells (zoom out, more rows visible); zoom=4 → largest cells (zoom in, fewer rows visible)
-const GRID_ZOOM_HEIGHTS = [58, 78, 108, 144, 184];
+// zoom=0 → smallest grid (zoom out, more rows visible); zoom=4 → full-width grid (zoom in, fewer rows visible)
+const GRID_ZOOM_WIDTHS = [42, 58, 74, 87, 100];
 const NAV_ITEMS = ["Feed Calendar","Stories","Analytics"];
 
 const PF="'Playfair Display',Georgia,serif";
@@ -584,7 +584,7 @@ function StoryDetail({seq,onClose,onStatus,onApproval,comment,setComment,onAddCo
 
 function IgGrid({posts,selected,onSelect}){
   const[zoom,setZoom]=useState(2);
-  const cellH=GRID_ZOOM_HEIGHTS[zoom];
+  const gridPct=GRID_ZOOM_WIDTHS[zoom];
   const ordered=sortNewestFirst(posts);
   return(
     <div style={{background:SURF,borderRadius:12,padding:14,border:`1px solid ${BORDER}`}}>
@@ -598,6 +598,7 @@ function IgGrid({posts,selected,onSelect}){
           <button onClick={()=>setZoom(z=>Math.min(4,z+1))} disabled={zoom===4} title="Zoom in — larger cells, see less" style={{width:26,height:26,borderRadius:6,border:`1px solid ${BORDER}`,background:zoom===4?SURF:SURF2,color:zoom===4?TX4:TX2,fontFamily:IN,fontSize:14,fontWeight:700,cursor:zoom===4?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>+</button>
         </div>
       </div>
+      <div style={{width:`${gridPct}%`,margin:"0 auto",transition:"width 0.2s"}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:2}}>
         {ordered.map(p=>{
           const pl=getPillar(p.pillar);
@@ -607,7 +608,7 @@ function IgGrid({posts,selected,onSelect}){
           const hasThumb=!!thumb;
           return(
             <div key={p.id} onClick={()=>onSelect(p.id)}
-              style={{height:cellH,background:pl.bg,cursor:"pointer",overflow:"hidden",position:"relative",outline:selected===p.id?`2px solid ${TEAL}`:"2px solid transparent"}}>
+              style={{aspectRatio:"4/5",background:pl.bg,cursor:"pointer",overflow:"hidden",position:"relative",outline:selected===p.id?`2px solid ${TEAL}`:"2px solid transparent"}}>
               {hasThumb&&<img src={thumb.url} alt="" style={{width:"100%",height:"100%",objectFit:"cover",position:"absolute",inset:0}}/>}
               {!hasThumb&&(
                 <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:6,gap:3}}>
@@ -622,6 +623,7 @@ function IgGrid({posts,selected,onSelect}){
           );
         })}
         {ordered.length===0&&<div style={{gridColumn:"1/-1",textAlign:"center",padding:"40px 20px",fontFamily:IN,fontSize:12,fontWeight:600,color:TX4}}>No posts yet</div>}
+      </div>
       </div>
       <div style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX4,textAlign:"center",marginTop:10,letterSpacing:"0.06em",textTransform:"uppercase"}}>{ordered.length} posts · newest first · pillar colours</div>
     </div>
