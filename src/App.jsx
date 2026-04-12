@@ -583,7 +583,7 @@ function StoryDetail({seq,onClose,onStatus,onApproval,comment,setComment,onAddCo
 // ── IG Grid ───────────────────────────────────────────────────────
 
 function IgGrid({posts,selected,onSelect}){
-  const[zoom,setZoom]=useState(2);
+  const[zoom,setZoom]=useState(4);
   const gridPct=GRID_ZOOM_WIDTHS[zoom];
   const ordered=sortNewestFirst(posts);
   return(
@@ -611,9 +611,10 @@ function IgGrid({posts,selected,onSelect}){
               style={{aspectRatio:"4/5",background:pl.bg,cursor:"pointer",overflow:"hidden",position:"relative",outline:selected===p.id?`2px solid ${TEAL}`:"2px solid transparent"}}>
               {hasThumb&&<img src={thumb.url} alt="" style={{width:"100%",height:"100%",objectFit:"cover",position:"absolute",inset:0}}/>}
               {!hasThumb&&(
-                <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:6,gap:3}}>
-                  <div style={{fontFamily:IN,fontSize:9,fontWeight:700,color:pl.color,textAlign:"center",letterSpacing:"0.04em",textTransform:"uppercase"}}>{p.format||"Post"}</div>
-                  <div style={{fontFamily:IN,fontSize:8,fontWeight:600,color:pl.color,opacity:.7,textAlign:"center"}}>{p.day} W{p.week}</div>
+                <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",padding:"4px 6px",gap:2}}>
+                  <div style={{fontFamily:IN,fontSize:9,fontWeight:700,color:pl.color,letterSpacing:"0.04em",textTransform:"uppercase",lineHeight:1.2}}>{p.format||"Post"}</div>
+                  {p.subject?<div style={{fontFamily:IN,fontSize:8,fontWeight:600,color:pl.color,opacity:.85,lineHeight:1.3,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{p.subject}</div>:null}
+                  <div style={{fontFamily:IN,fontSize:8,fontWeight:600,color:pl.color,opacity:.55,lineHeight:1.2}}>{p.day} · W{p.week}</div>
                 </div>
               )}
               {isVid&&<div style={{position:"absolute",top:4,right:4,pointerEvents:"none"}}><svg width="11" height="11" viewBox="0 0 24 24" fill="white" opacity=".85"><path d="M4 2l16 10L4 22V2z"/></svg></div>}
@@ -800,7 +801,7 @@ function FeedTab({month}){
             })
           ):<IgGrid posts={posts} selected={selected} onSelect={id=>{setSelected(selected===id?null:id);setEditing(null);}}/>}
         </div>
-        {sel&&!editing&&<div ref={detailRef} style={{position:"sticky",top:16,maxHeight:"calc(100vh - 48px)",overflowY:"auto",borderRadius:12}}><PostDetail post={sel} onClose={()=>setSelected(null)} onStatus={s=>setSt(sel.id,s)} onApproval={s=>setSt(sel.id,s)} comment={comment} setComment={setComment} onAddComment={()=>addC(sel.id)} onEdit={()=>{setEditing(sel.id);setSelected(null);}} onDelete={()=>del(sel.id)}/></div>}
+        {sel&&!editing&&<div ref={detailRef} style={{alignSelf:"stretch"}}><div style={{position:"sticky",top:16,maxHeight:"calc(100vh - 48px)",overflowY:"auto",borderRadius:12}}><PostDetail post={sel} onClose={()=>setSelected(null)} onStatus={s=>setSt(sel.id,s)} onApproval={s=>setSt(sel.id,s)} comment={comment} setComment={setComment} onAddComment={()=>addC(sel.id)} onEdit={()=>{setEditing(sel.id);setSelected(null);}} onDelete={()=>del(sel.id)}/></div></div>}
       </div>
     </div>
   );
@@ -952,7 +953,7 @@ function StoriesTab({month}){
             );
           })}
         </div>
-        {sel&&!editing&&<div ref={detailRef} style={{position:"sticky",top:16,maxHeight:"calc(100vh - 48px)",overflowY:"auto",borderRadius:12}}><StoryDetail seq={sel} onClose={()=>setSelected(null)} onStatus={s=>setSt(sel.id,s)} onApproval={s=>setSt(sel.id,s)} comment={comment} setComment={setComment} onAddComment={()=>addC(sel.id)} onEdit={()=>{setEditing(sel.id);setSelected(null);}} onDelete={()=>del(sel.id)}/></div>}
+        {sel&&!editing&&<div ref={detailRef} style={{alignSelf:"stretch"}}><div style={{position:"sticky",top:16,maxHeight:"calc(100vh - 48px)",overflowY:"auto",borderRadius:12}}><StoryDetail seq={sel} onClose={()=>setSelected(null)} onStatus={s=>setSt(sel.id,s)} onApproval={s=>setSt(sel.id,s)} comment={comment} setComment={setComment} onAddComment={()=>addC(sel.id)} onEdit={()=>{setEditing(sel.id);setSelected(null);}} onDelete={()=>del(sel.id)}/></div></div>}
       </div>
     </div>
   );
