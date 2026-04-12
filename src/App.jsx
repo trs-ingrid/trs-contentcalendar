@@ -27,8 +27,8 @@ const FORMATS   = ["Reel","Carousel","Static","Testimonial","Story Reel"];
 const WEEKS     = ["1","2","3","4"];
 const STATUSES  = ["Draft","For Review","Approved","For Revision","Uploaded"];
 const STORY_TYPES = ["Unique — BTS moment","Unique — Poll / Quiz","Unique — Behind the chair","Unique — Team feature","Unique — Offer / Giveaway","Unique — Client reaction","Unique — Education","Repost from feed"];
-// zoom=0 → shortest cells (zoom out, most rows visible); zoom=4 → tallest cells (zoom in, fewest rows visible)
-const GRID_ZOOM_ASPECTS = ["4/3","1/1","4/5","2/3","9/16"];
+// zoom=0 → smallest cells (zoom out, more rows visible); zoom=4 → largest cells (zoom in, fewer rows visible)
+const GRID_ZOOM_HEIGHTS = [58, 78, 108, 144, 184];
 const NAV_ITEMS = ["Feed Calendar","Stories","Analytics"];
 
 const PF="'Playfair Display',Georgia,serif";
@@ -584,7 +584,7 @@ function StoryDetail({seq,onClose,onStatus,onApproval,comment,setComment,onAddCo
 
 function IgGrid({posts,selected,onSelect}){
   const[zoom,setZoom]=useState(2);
-  const cellAspect=GRID_ZOOM_ASPECTS[zoom];
+  const cellH=GRID_ZOOM_HEIGHTS[zoom];
   const ordered=sortNewestFirst(posts);
   return(
     <div style={{background:SURF,borderRadius:12,padding:14,border:`1px solid ${BORDER}`}}>
@@ -607,7 +607,7 @@ function IgGrid({posts,selected,onSelect}){
           const hasThumb=!!thumb;
           return(
             <div key={p.id} onClick={()=>onSelect(p.id)}
-              style={{aspectRatio:cellAspect,background:pl.bg,cursor:"pointer",overflow:"hidden",position:"relative",outline:selected===p.id?`2px solid ${TEAL}`:"2px solid transparent"}}>
+              style={{height:cellH,background:pl.bg,cursor:"pointer",overflow:"hidden",position:"relative",outline:selected===p.id?`2px solid ${TEAL}`:"2px solid transparent"}}>
               {hasThumb&&<img src={thumb.url} alt="" style={{width:"100%",height:"100%",objectFit:"cover",position:"absolute",inset:0}}/>}
               {!hasThumb&&(
                 <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:6,gap:3}}>
