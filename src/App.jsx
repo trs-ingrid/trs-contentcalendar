@@ -256,7 +256,12 @@ function ApprovalPanel({status,onChange}){
   );
 }
 
-function Comments({comments,val,setVal,onAdd}){
+function Comments({comments,val,setVal,onAdd,onEdit,onDelete}){
+  const[editIdx,setEditIdx]=useState(null);
+  const[editVal,setEditVal]=useState("");
+  const startEdit=(i)=>{setEditIdx(i);setEditVal(comments[i]);};
+  const saveEdit=()=>{if(editVal.trim()&&onEdit){onEdit(editIdx,editVal.trim());}setEditIdx(null);setEditVal("");};
+  const cancelEdit=()=>{setEditIdx(null);setEditVal("");};
   return(
     <div style={{borderTop:`1px solid ${BORDER2}`,paddingTop:14}}>
       <Label>Comments {comments.length>0&&`(${comments.length})`}</Label>
@@ -264,7 +269,25 @@ function Comments({comments,val,setVal,onAdd}){
       {comments.map((c,i)=>(
         <div key={i} style={{display:"flex",gap:8,marginBottom:10}}>
           <div style={{width:26,height:26,borderRadius:"50%",background:SURF3,border:`1px solid ${BORDER}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontFamily:IN,fontWeight:700,color:TEAL,flexShrink:0}}>SM</div>
-          <div style={{fontSize:13,fontFamily:IN,fontWeight:600,color:TX2,background:SURF2,borderRadius:8,padding:"8px 12px",flex:1,lineHeight:1.6,border:`1px solid ${BORDER}`}}>{c}</div>
+          <div style={{flex:1}}>
+            {editIdx===i?(
+              <div>
+                <input value={editVal} onChange={e=>setEditVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")saveEdit();if(e.key==="Escape")cancelEdit();}} autoFocus style={{width:"100%",fontFamily:IN,fontWeight:600,fontSize:12,padding:"6px 10px",borderRadius:8,border:`1px solid ${TEAL}`,background:SURF2,color:TX1,boxSizing:"border-box",marginBottom:6}}/>
+                <div style={{display:"flex",gap:6}}>
+                  <button onClick={saveEdit} style={{padding:"4px 12px",fontFamily:IN,fontSize:11,fontWeight:700,borderRadius:6,border:`1px solid ${TEAL}`,background:`${TEAL}18`,color:TEAL,cursor:"pointer"}}>Save</button>
+                  <button onClick={cancelEdit} style={{padding:"4px 12px",fontFamily:IN,fontSize:11,fontWeight:600,borderRadius:6,border:`1px solid ${BORDER}`,background:SURF3,color:TX3,cursor:"pointer"}}>Cancel</button>
+                </div>
+              </div>
+            ):(
+              <div style={{fontSize:13,fontFamily:IN,fontWeight:600,color:TX2,background:SURF2,borderRadius:8,padding:"8px 12px",border:`1px solid ${BORDER}`,lineHeight:1.6}}>
+                <div>{c}</div>
+                <div style={{display:"flex",gap:10,marginTop:5,borderTop:`1px solid ${BORDER2}`,paddingTop:5}}>
+                  <button onClick={()=>startEdit(i)} style={{border:"none",background:"none",cursor:"pointer",color:TX4,fontFamily:IN,fontSize:10,fontWeight:700,padding:0,letterSpacing:"0.04em"}}>EDIT</button>
+                  <button onClick={()=>onDelete&&onDelete(i)} style={{border:"none",background:"none",cursor:"pointer",color:CORAL,fontFamily:IN,fontSize:10,fontWeight:700,padding:0,letterSpacing:"0.04em"}}>DELETE</button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       ))}
       <div style={{display:"flex",gap:8,marginTop:8}}>
@@ -345,14 +368,15 @@ function ContentStats({items,label}){
             const tooMany=p.diff>1;
             return(
               <div key={p.name} style={{borderRadius:8,padding:"8px 10px",background:p.bg,border:`1.5px solid ${p.color}44`}}>
-                <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:4}}>
+                <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:6}}>
                   <div style={{width:8,height:8,borderRadius:"50%",background:p.color,flexShrink:0}}/>
                   <span style={{fontFamily:IN,fontSize:10,fontWeight:700,color:p.color,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{p.name}</span>
                 </div>
-                <div style={{fontFamily:IN,fontSize:16,fontWeight:700,color:p.color,lineHeight:1,marginBottom:3}}>{p.actual}%</div>
-                <div style={{fontFamily:IN,fontSize:10,fontWeight:600,color:p.color,opacity:0.7,marginBottom:needMore||tooMany?4:0}}>target {p.target}% · {p.count}/{p.targetCount}</div>
+                <div style={{fontFamily:IN,fontSize:20,fontWeight:700,color:p.color,lineHeight:1,marginBottom:2}}>{p.count}</div>
+                <div style={{fontFamily:IN,fontSize:10,fontWeight:600,color:p.color,opacity:0.65,marginBottom:4}}>of {p.targetCount} target · {p.actual}% / {p.target}%</div>
                 {needMore&&<div style={{fontFamily:IN,fontSize:11,fontWeight:700,color:p.color}}>↑ need {Math.abs(p.diff)} more</div>}
-                {tooMany&&<div style={{fontFamily:IN,fontSize:11,fontWeight:700,color:p.color}}>↓ reduce by {p.diff}</div>}
+                {tooMany&&<div style={{fontFamily:IN,fontSize:11,fontWeight:700,color:p.color}}>↓ {p.diff} over target</div>}
+                {!needMore&&!tooMany&&<div style={{fontFamily:IN,fontSize:10,fontWeight:600,color:p.color,opacity:0.8}}>✓ on target</div>}
               </div>
             );
           })}
@@ -464,7 +488,7 @@ function EditForm({post,onSave,onCancel,type}){
 
 // ── Post Detail ───────────────────────────────────────────────────
 
-function PostDetail({post,onClose,onStatus,onApproval,comment,setComment,onAddComment,onEdit,onDelete}){
+function PostDetail({post,onClose,onStatus,onApproval,comment,setComment,onAddComment,onEdit,onDelete,onEditComment,onDeleteComment}){
   const pl=getPillar(post.pillar);
   const videoFiles=post.video||[];
   const imgFiles=post.images||[];
@@ -491,7 +515,7 @@ function PostDetail({post,onClose,onStatus,onApproval,comment,setComment,onAddCo
             :<div style={{width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,padding:20,background:pl.bg}}>
               <Tag label={post.format||"No format"} bg="rgba(0,0,0,0.1)" color={pl.color}/>
               <div style={{fontFamily:PF,fontWeight:700,fontStyle:"italic",fontSize:18,color:pl.color,textAlign:"center",lineHeight:1.4}}>{post.subject||<span style={{opacity:.5,fontStyle:"italic"}}>No subject set</span>}</div>
-              <div style={{fontFamily:IN,fontSize:11,fontWeight:600,color:pl.color,opacity:.7}}>{post.day} · Week {post.week}</div>
+              <div style={{fontFamily:IN,fontSize:11,fontWeight:600,color:pl.color,opacity:.7,textAlign:"center"}}>{post.day} · Week {post.week}</div>
             </div>
           }
         </div>
@@ -517,7 +541,7 @@ function PostDetail({post,onClose,onStatus,onApproval,comment,setComment,onAddCo
           <button onClick={onEdit} style={{padding:"10px",fontFamily:IN,fontSize:13,fontWeight:700,borderRadius:8,border:`1px solid ${BORDER}`,cursor:"pointer",background:SURF2,color:TX2}}>Edit post</button>
           <button onClick={onDelete} style={{padding:"10px",fontFamily:IN,fontSize:13,fontWeight:700,borderRadius:8,border:`1px solid ${CORAL}55`,cursor:"pointer",background:`${CORAL}15`,color:CORAL}}>Delete</button>
         </div>
-        <Comments comments={post.comments} val={comment} setVal={setComment} onAdd={onAddComment}/>
+        <Comments comments={post.comments} val={comment} setVal={setComment} onAdd={onAddComment} onEdit={onEditComment} onDelete={onDeleteComment}/>
       </div>
       <div style={{height:18}}/>
     </div>
@@ -526,7 +550,7 @@ function PostDetail({post,onClose,onStatus,onApproval,comment,setComment,onAddCo
 
 // ── Story Detail ──────────────────────────────────────────────────
 
-function StoryDetail({seq,onClose,onStatus,onApproval,comment,setComment,onAddComment,onEdit,onDelete}){
+function StoryDetail({seq,onClose,onStatus,onApproval,comment,setComment,onAddComment,onEdit,onDelete,onEditComment,onDeleteComment}){
   const pl=getPillar(seq.pillar);
   const imgs=seq.images||[];
   return(
@@ -574,7 +598,7 @@ function StoryDetail({seq,onClose,onStatus,onApproval,comment,setComment,onAddCo
           <button onClick={onEdit} style={{padding:"10px",fontFamily:IN,fontSize:13,fontWeight:700,borderRadius:8,border:`1px solid ${BORDER}`,cursor:"pointer",background:SURF2,color:TX2}}>Edit</button>
           <button onClick={onDelete} style={{padding:"10px",fontFamily:IN,fontSize:13,fontWeight:700,borderRadius:8,border:`1px solid ${CORAL}55`,cursor:"pointer",background:`${CORAL}15`,color:CORAL}}>Delete</button>
         </div>
-        <Comments comments={seq.comments} val={comment} setVal={setComment} onAdd={onAddComment}/>
+        <Comments comments={seq.comments} val={comment} setVal={setComment} onAdd={onAddComment} onEdit={onEditComment} onDelete={onDeleteComment}/>
       </div>
     </div>
   );
@@ -734,6 +758,8 @@ function FeedTab({month}){
   const upd=p=>{setPosts(v=>v.map(x=>x.id===p.id?p:x));setEditing(null);setSelected(p.id);};
   const setSt=async(id,s)=>{await supabase.from("feed_posts").update({status:s}).eq("id",id);setPosts(v=>v.map(p=>p.id===id?{...p,status:s}:p));};
   const addC=async id=>{if(!comment.trim()) return;const post=posts.find(p=>p.id===id);const nc=[...(post.comments||[]),comment.trim()];await supabase.from("feed_posts").update({comments:nc}).eq("id",id);setPosts(v=>v.map(p=>p.id===id?{...p,comments:nc}:p));setComment("");};
+  const editComment=async(id,idx,text)=>{const post=posts.find(p=>p.id===id);const nc=(post.comments||[]).map((c,i)=>i===idx?text:c);await supabase.from("feed_posts").update({comments:nc}).eq("id",id);setPosts(v=>v.map(p=>p.id===id?{...p,comments:nc}:p));};
+  const delComment=async(id,idx)=>{const post=posts.find(p=>p.id===id);const nc=(post.comments||[]).filter((_,i)=>i!==idx);await supabase.from("feed_posts").update({comments:nc}).eq("id",id);setPosts(v=>v.map(p=>p.id===id?{...p,comments:nc}:p));};
   const dup=async id=>{
     const orig=posts.find(p=>p.id===id);if(!orig) return;
     const payload={month,week:orig.week,day:orig.day,pillar:orig.pillar,format:orig.format,subject:(orig.subject||"")+" (copy)",caption:orig.caption||"",hashtags:orig.hashtags||"",status:"Draft",comments:[],image_urls:orig.images||[],video_url:orig.video?.[0]?.url||null};
@@ -774,7 +800,7 @@ function FeedTab({month}){
             </button>
           </div>
           <div style={{padding:16}}>
-            <PostDetail post={sel} onClose={()=>setSelected(null)} onStatus={s=>setSt(sel.id,s)} onApproval={s=>setSt(sel.id,s)} comment={comment} setComment={setComment} onAddComment={()=>addC(sel.id)} onEdit={()=>{setEditing(sel.id);setSelected(null);}} onDelete={()=>del(sel.id)}/>
+            <PostDetail post={sel} onClose={()=>setSelected(null)} onStatus={s=>setSt(sel.id,s)} onApproval={s=>setSt(sel.id,s)} comment={comment} setComment={setComment} onAddComment={()=>addC(sel.id)} onEdit={()=>{setEditing(sel.id);setSelected(null);}} onDelete={()=>del(sel.id)} onEditComment={(idx,text)=>editComment(sel.id,idx,text)} onDeleteComment={idx=>delComment(sel.id,idx)}/>
           </div>
         </div>
       )}
@@ -801,7 +827,7 @@ function FeedTab({month}){
             })
           ):<IgGrid posts={posts} selected={selected} onSelect={id=>{setSelected(selected===id?null:id);setEditing(null);}}/>}
         </div>
-        {sel&&!editing&&<div ref={detailRef} style={{alignSelf:"stretch"}}><div style={{position:"sticky",top:16,maxHeight:"calc(100vh - 48px)",overflowY:"auto",borderRadius:12}}><PostDetail post={sel} onClose={()=>setSelected(null)} onStatus={s=>setSt(sel.id,s)} onApproval={s=>setSt(sel.id,s)} comment={comment} setComment={setComment} onAddComment={()=>addC(sel.id)} onEdit={()=>{setEditing(sel.id);setSelected(null);}} onDelete={()=>del(sel.id)}/></div></div>}
+        {sel&&!editing&&<div ref={detailRef} style={{alignSelf:"stretch"}}><div style={{position:"sticky",top:16,borderRadius:12}}><PostDetail post={sel} onClose={()=>setSelected(null)} onStatus={s=>setSt(sel.id,s)} onApproval={s=>setSt(sel.id,s)} comment={comment} setComment={setComment} onAddComment={()=>addC(sel.id)} onEdit={()=>{setEditing(sel.id);setSelected(null);}} onDelete={()=>del(sel.id)} onEditComment={(idx,text)=>editComment(sel.id,idx,text)} onDeleteComment={idx=>delComment(sel.id,idx)}/></div></div>}
       </div>
     </div>
   );
@@ -835,6 +861,8 @@ function StoriesTab({month}){
   const upd=s=>{setSeqs(v=>v.map(x=>x.id===s.id?s:x));setEditing(null);setSelected(s.id);};
   const setSt=async(id,st)=>{await supabase.from("story_sequences").update({status:st}).eq("id",id);setSeqs(v=>v.map(s=>s.id===id?{...s,status:st}:s));};
   const addC=async id=>{if(!comment.trim()) return;const seq=seqs.find(s=>s.id===id);const nc=[...(seq.comments||[]),comment.trim()];await supabase.from("story_sequences").update({comments:nc}).eq("id",id);setSeqs(v=>v.map(s=>s.id===id?{...s,comments:nc}:s));setComment("");};
+  const editComment=async(id,idx,text)=>{const seq=seqs.find(s=>s.id===id);const nc=(seq.comments||[]).map((c,i)=>i===idx?text:c);await supabase.from("story_sequences").update({comments:nc}).eq("id",id);setSeqs(v=>v.map(s=>s.id===id?{...s,comments:nc}:s));};
+  const delComment=async(id,idx)=>{const seq=seqs.find(s=>s.id===id);const nc=(seq.comments||[]).filter((_,i)=>i!==idx);await supabase.from("story_sequences").update({comments:nc}).eq("id",id);setSeqs(v=>v.map(s=>s.id===id?{...s,comments:nc}:s));};
   const dup=async id=>{
     const orig=seqs.find(s=>s.id===id);if(!orig) return;
     const payload={month,week:orig.week,day:orig.day,type:orig.type,pillar:orig.pillar,frames:orig.frames||"",caption:orig.caption||"",status:"Draft",comments:[],image_urls:orig.images||[]};
@@ -884,7 +912,7 @@ function StoriesTab({month}){
             </button>
           </div>
           <div style={{padding:16}}>
-            <StoryDetail seq={sel} onClose={()=>setSelected(null)} onStatus={s=>setSt(sel.id,s)} onApproval={s=>setSt(sel.id,s)} comment={comment} setComment={setComment} onAddComment={()=>addC(sel.id)} onEdit={()=>{setEditing(sel.id);setSelected(null);}} onDelete={()=>del(sel.id)}/>
+            <StoryDetail seq={sel} onClose={()=>setSelected(null)} onStatus={s=>setSt(sel.id,s)} onApproval={s=>setSt(sel.id,s)} comment={comment} setComment={setComment} onAddComment={()=>addC(sel.id)} onEdit={()=>{setEditing(sel.id);setSelected(null);}} onDelete={()=>del(sel.id)} onEditComment={(idx,text)=>editComment(sel.id,idx,text)} onDeleteComment={idx=>delComment(sel.id,idx)}/>
           </div>
         </div>
       )}
@@ -953,7 +981,7 @@ function StoriesTab({month}){
             );
           })}
         </div>
-        {sel&&!editing&&<div ref={detailRef} style={{alignSelf:"stretch"}}><div style={{position:"sticky",top:16,maxHeight:"calc(100vh - 48px)",overflowY:"auto",borderRadius:12}}><StoryDetail seq={sel} onClose={()=>setSelected(null)} onStatus={s=>setSt(sel.id,s)} onApproval={s=>setSt(sel.id,s)} comment={comment} setComment={setComment} onAddComment={()=>addC(sel.id)} onEdit={()=>{setEditing(sel.id);setSelected(null);}} onDelete={()=>del(sel.id)}/></div></div>}
+        {sel&&!editing&&<div ref={detailRef} style={{alignSelf:"stretch"}}><div style={{position:"sticky",top:16,borderRadius:12}}><StoryDetail seq={sel} onClose={()=>setSelected(null)} onStatus={s=>setSt(sel.id,s)} onApproval={s=>setSt(sel.id,s)} comment={comment} setComment={setComment} onAddComment={()=>addC(sel.id)} onEdit={()=>{setEditing(sel.id);setSelected(null);}} onDelete={()=>del(sel.id)} onEditComment={(idx,text)=>editComment(sel.id,idx,text)} onDeleteComment={idx=>delComment(sel.id,idx)}/></div></div>}
       </div>
     </div>
   );
