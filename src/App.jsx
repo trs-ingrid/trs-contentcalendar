@@ -24,7 +24,27 @@ const PILLAR_TARGETS = { "Transformation":30,"Education":25,"BTS & Culture":20,"
 const DAYS      = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 const DAY_IDX   = { Mon:0,Tue:1,Wed:2,Thu:3,Fri:4,Sat:5,Sun:6 };
 const FORMATS   = ["Reel","Carousel","Static","Testimonial","Story Reel"];
-const WEEKS     = ["1","2","3","4"];
+const CMS_YEAR  = 2026;
+// Returns ["1","2",...] for however many Mon-started weeks the month contains
+function getWeeksForMonth(m){
+  const idx=MONTHS.indexOf(m); if(idx===-1) return["1","2","3","4"];
+  const first=new Date(CMS_YEAR,idx,1), last=new Date(CMS_YEAR,idx+1,0);
+  let n=1; const d=new Date(first); d.setDate(2);
+  while(d<=last){if(d.getDay()===1)n++; d.setDate(d.getDate()+1);}
+  return Array.from({length:n},(_,i)=>String(i+1));
+}
+// Returns "1–5" style date range string for a given week within a month
+function getWeekDateRange(m,wk){
+  const idx=MONTHS.indexOf(m); if(idx===-1) return"";
+  const first=new Date(CMS_YEAR,idx,1), last=new Date(CMS_YEAR,idx+1,0);
+  let cur=1,ws=1;
+  for(let d=new Date(first);d<=last;d.setDate(d.getDate()+1)){
+    const dt=d.getDate(),dow=d.getDay();
+    if(dow===1&&dt!==1){if(cur===Number(wk)) return`${ws}–${dt-1}`; cur++;ws=dt;}
+  }
+  if(cur===Number(wk)) return`${ws}–${last.getDate()}`;
+  return"";
+}
 const STATUSES  = ["Draft","For Review","Approved","For Revision","Uploaded"];
 const STORY_TYPES = ["Unique — BTS moment","Unique — Poll / Quiz","Unique — Behind the chair","Unique — Team feature","Unique — Offer / Giveaway","Unique — Client reaction","Unique — Education","Repost from feed"];
 // zoom=0 → smallest grid (zoom out, more rows visible); zoom=4 → full-width grid (zoom in, fewer rows visible)
@@ -426,7 +446,7 @@ function PostForm({onAdd,onCancel,type,month}){
   return(
     <Shell title={type==="feed"?"New feed post":"New story sequence"} onCancel={onCancel} onSave={save} saveLabel="Save post" saving={saving}>
       <div style={{display:"grid",gridTemplateColumns:isMob?"1fr":"1fr 1fr 1fr",gap:10,marginBottom:4}}>
-        <FRow label="Week"><Sel value={d.week} onChange={v=>u("week",v)}>{WEEKS.map(w=><option key={w} value={w}>Week {w}</option>)}</Sel></FRow>
+        <FRow label="Week"><Sel value={d.week} onChange={v=>u("week",v)}>{getWeeksForMonth(month).map(w=><option key={w} value={w}>Week {w} · {getWeekDateRange(month,w)}</option>)}</Sel></FRow>
         <FRow label="Day"><Sel value={d.day} onChange={v=>u("day",v)}>{DAYS.map(x=><option key={x}>{x}</option>)}</Sel></FRow>
         {type==="feed"?<FRow label="Format"><Sel value={d.format} onChange={v=>u("format",v)}>{FORMATS.map(x=><option key={x}>{x}</option>)}</Sel></FRow>
           :<FRow label="Story type"><Sel value={d.type} onChange={v=>u("type",v)}>{STORY_TYPES.map(x=><option key={x}>{x}</option>)}</Sel></FRow>}
@@ -455,6 +475,7 @@ function EditForm({post,onSave,onCancel,type}){
   const u=(k,v)=>setD(x=>({...x,[k]:v}));
   const isMob=useIsMobile();
   const ss=getSS(d.status);
+  const month=post.month||"January";
   const save=async()=>{
     setSaving(true);
     try{
@@ -473,7 +494,7 @@ function EditForm({post,onSave,onCancel,type}){
   return(
     <Shell title="Edit post" rule={GREEN} onCancel={onCancel} onSave={save} saveLabel="Save changes" saving={saving}>
       <div style={{display:"grid",gridTemplateColumns:isMob?"1fr":"1fr 1fr 1fr",gap:10,marginBottom:4}}>
-        <FRow label="Week"><Sel value={d.week} onChange={v=>u("week",v)}>{WEEKS.map(w=><option key={w} value={w}>Week {w}</option>)}</Sel></FRow>
+        <FRow label="Week"><Sel value={d.week} onChange={v=>u("week",v)}>{getWeeksForMonth(month).map(w=><option key={w} value={w}>Week {w} · {getWeekDateRange(month,w)}</option>)}</Sel></FRow>
         <FRow label="Day"><Sel value={d.day} onChange={v=>u("day",v)}>{DAYS.map(x=><option key={x}>{x}</option>)}</Sel></FRow>
         {type==="feed"?<FRow label="Format"><Sel value={d.format} onChange={v=>u("format",v)}>{FORMATS.map(x=><option key={x}>{x}</option>)}</Sel></FRow>
           :<FRow label="Story type"><Sel value={d.type} onChange={v=>u("type",v)}>{STORY_TYPES.map(x=><option key={x}>{x}</option>)}</Sel></FRow>}
@@ -825,7 +846,7 @@ function FeedTab({month}){
       <div style={{display:"grid",gridTemplateColumns:!isMob&&sel&&!editing?"1fr 360px":"1fr",gap:16,alignItems:"start"}}>
         <div>
           {view==="calendar"?(
-            ["1","2","3","4"].map(w=>{
+            getWeeksForMonth(month).map(w=>{
               const wp=filt.filter(p=>p.week===w);
               if(!wp.length) return null;
               const collapsed=!!collapsedWeeks[w];
@@ -834,6 +855,7 @@ function FeedTab({month}){
                   <div onClick={()=>toggleWeek(w)} style={{display:"flex",alignItems:"center",gap:10,marginBottom:collapsed?0:10,paddingBottom:8,borderBottom:`1px solid ${BORDER2}`,cursor:"pointer",userSelect:"none"}}>
                     <div style={{width:3,height:14,background:TEAL,borderRadius:2,flexShrink:0}}/>
                     <div style={{fontFamily:PF,fontWeight:700,fontStyle:"italic",fontSize:16,color:TX2}}>Week {w}</div>
+                    <div style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX3}}>{month.slice(0,3)} {getWeekDateRange(month,w)}</div>
                     <div style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX4}}>{wp.length} post{wp.length!==1?"s":""}</div>
                     <div style={{marginLeft:"auto",fontFamily:IN,fontSize:11,color:TX4}}>{collapsed?"▶":"▼"}</div>
                   </div>
@@ -937,7 +959,7 @@ function StoriesTab({month}){
       )}
       <div style={{display:"grid",gridTemplateColumns:!isMob&&sel&&!editing?"1fr 360px":"1fr",gap:16,alignItems:"start"}}>
         <div>
-          {["1","2","3","4"].map(w=>{
+          {getWeeksForMonth(month).map(w=>{
             const wp=filt.filter(s=>s.week===w);
             if(!wp.length) return null;
             const collapsed=!!collapsedWeeks[w];
@@ -946,6 +968,7 @@ function StoriesTab({month}){
                 <div onClick={()=>toggleWeek(w)} style={{display:"flex",alignItems:"center",gap:10,marginBottom:collapsed?0:10,paddingBottom:8,borderBottom:`1px solid ${BORDER2}`,cursor:"pointer",userSelect:"none"}}>
                   <div style={{width:3,height:14,background:PURPLE,borderRadius:2,flexShrink:0}}/>
                   <div style={{fontFamily:PF,fontWeight:700,fontStyle:"italic",fontSize:16,color:TX2}}>Week {w}</div>
+                  <div style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX3}}>{month.slice(0,3)} {getWeekDateRange(month,w)}</div>
                   <div style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX4}}>{wp.length} sequence{wp.length!==1?"s":""}</div>
                   <div style={{marginLeft:"auto",fontFamily:IN,fontSize:11,color:TX4}}>{collapsed?"▶":"▼"}</div>
                 </div>
@@ -1034,6 +1057,7 @@ function Login({onLogin}){
 // ── App ───────────────────────────────────────────────────────────
 
 export default function App(){
+  const _z="CMS_MARKER_UNIQUE_12345";
   const[month,setMonth]=useState("April");
   const[tab,setTab]=useState("Feed Calendar");
   const[sideOpen,setSideOpen]=useState(false);
@@ -1047,9 +1071,9 @@ export default function App(){
         <div style={{width:32,height:2,background:TEAL,borderRadius:1,marginBottom:12}}/>
         <div style={{fontFamily:IN,fontSize:11,fontWeight:700,color:TX1,letterSpacing:"0.12em",textTransform:"uppercase"}}>Tara Rose</div>
         <div style={{fontFamily:IN,fontSize:9,fontWeight:600,color:TEAL,letterSpacing:"0.12em",textTransform:"uppercase",marginTop:3}}>Content System</div>
-        <div style={{marginTop:12,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <span style={{fontFamily:IN,fontSize:10,fontWeight:700,color:TX3,letterSpacing:"0.06em",textTransform:"uppercase"}}>{role}</span>
-          <button onClick={()=>{localStorage.removeItem("cms_role");setRole(null);}} style={{fontFamily:IN,fontSize:10,fontWeight:700,color:TX4,border:"none",background:"none",cursor:"pointer",padding:0,letterSpacing:"0.04em"}}>Sign out</button>
+        <div style={{marginTop:12,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+          <span style={{fontFamily:IN,fontSize:10,fontWeight:700,background:`${TEAL}22`,color:TEAL,border:`1px solid ${TEAL}55`,borderRadius:20,padding:"3px 10px",letterSpacing:"0.06em",textTransform:"uppercase"}}>{role}</span>
+          <button onClick={()=>{localStorage.removeItem("cms_role");setRole(null);}} style={{fontFamily:IN,fontSize:10,fontWeight:700,color:TX2,border:`1px solid ${BORDER}`,background:SURF3,borderRadius:6,cursor:"pointer",padding:"3px 10px",letterSpacing:"0.04em"}}>Sign out</button>
         </div>
       </div>
       <div style={{padding:"20px 12px 12px"}}>
@@ -1092,6 +1116,10 @@ export default function App(){
           <div style={{flex:1}}>
             <div style={{fontFamily:IN,fontSize:13,fontWeight:700,color:TX1}}>{tab}</div>
             <div style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX3}}>{month}</div>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+            <span style={{fontFamily:IN,fontSize:10,fontWeight:700,background:`${TEAL}22`,color:TEAL,border:`1px solid ${TEAL}55`,borderRadius:20,padding:"3px 9px",letterSpacing:"0.06em",textTransform:"uppercase"}}>{role}</span>
+            <button onClick={()=>{localStorage.removeItem("cms_role");setRole(null);}} style={{fontFamily:IN,fontSize:11,fontWeight:700,color:TX2,border:`1px solid ${BORDER}`,background:SURF3,borderRadius:6,cursor:"pointer",padding:"4px 10px"}}>Sign out</button>
           </div>
         </div>}
 
