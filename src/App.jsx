@@ -780,6 +780,8 @@ function FeedTab({month,year}){
   const[comment,setComment]=useState("");
   const[view,setView]=useState("calendar");
   const[collapsedWeeks,setCollapsedWeeks]=useState({});
+  const[toast,setToast]=useState(null);
+  const showToast=(msg,type="success")=>setToast({msg,type});
 
   useEffect(()=>{
     setLoading(true);setSelected(null);setCollapsedWeeks({});
@@ -792,10 +794,20 @@ function FeedTab({month,year}){
   const sorted=sortOldestFirst(posts);
   const filt=filter==="All"?sorted:sorted.filter(p=>p.status===filter);
 
-  const add=p=>{setPosts(v=>[...v,p]);setAdding(false);setSelected(p.id);};
-  const del=async id=>{await supabase.from("feed_posts").delete().eq("id",id);setPosts(v=>v.filter(p=>p.id!==id));setSelected(null);};
-  const upd=p=>{setPosts(v=>v.map(x=>x.id===p.id?p:x));setEditing(null);setSelected(p.id);};
-  const setSt=async(id,s)=>{await supabase.from("feed_posts").update({status:s}).eq("id",id);setPosts(v=>v.map(p=>p.id===id?{...p,status:s}:p));};
+  const add=p=>{setPosts(v=>[...v,p]);setAdding(false);setSelected(p.id);showToast("Post added");};
+  const del=async id=>{
+    if(!window.confirm("Delete this post? This cannot be undone.")) return;
+    const{error}=await supabase.from("feed_posts").delete().eq("id",id);
+    if(error){showToast("Delete failed: "+error.message,"error");return;}
+    setPosts(v=>v.filter(p=>p.id!==id));setSelected(null);showToast("Post deleted");
+  };
+  const upd=p=>{setPosts(v=>v.map(x=>x.id===p.id?p:x));setEditing(null);setSelected(p.id);showToast("Changes saved");};
+  const setSt=async(id,s)=>{
+    const{error}=await supabase.from("feed_posts").update({status:s}).eq("id",id);
+    if(error){showToast("Update failed","error");return;}
+    setPosts(v=>v.map(p=>p.id===id?{...p,status:s}:p));
+    showToast(s==="Approved"?"Post approved":s==="For Revision"?"Marked for revision":"Status updated");
+  };
   const addC=async id=>{if(!comment.trim()) return;const post=posts.find(p=>p.id===id);const nc=[...(post.comments||[]),comment.trim()];await supabase.from("feed_posts").update({comments:nc}).eq("id",id);setPosts(v=>v.map(p=>p.id===id?{...p,comments:nc}:p));setComment("");};
   const editComment=async(id,idx,text)=>{const post=posts.find(p=>p.id===id);const nc=(post.comments||[]).map((c,i)=>i===idx?text:c);await supabase.from("feed_posts").update({comments:nc}).eq("id",id);setPosts(v=>v.map(p=>p.id===id?{...p,comments:nc}:p));};
   const delComment=async(id,idx)=>{const post=posts.find(p=>p.id===id);const nc=(post.comments||[]).filter((_,i)=>i!==idx);await supabase.from("feed_posts").update({comments:nc}).eq("id",id);setPosts(v=>v.map(p=>p.id===id?{...p,comments:nc}:p));};
@@ -803,25 +815,32 @@ function FeedTab({month,year}){
     const orig=posts.find(p=>p.id===id);if(!orig) return;
     const payload={month,year,week:orig.week,day:orig.day,pillar:orig.pillar,format:orig.format,subject:(orig.subject||"")+" (copy)",caption:orig.caption||"",hashtags:orig.hashtags||"",status:"Draft",comments:[],image_urls:orig.images||[],video_url:orig.video?.[0]?.url||null};
     const{data,error}=await supabase.from("feed_posts").insert([payload]).select();
-    if(error){alert("Duplicate failed: "+error.message);return;}
-    setPosts(v=>[...v,normalise(data[0],"feed")]);
+    if(error){showToast("Duplicate failed","error");return;}
+    setPosts(v=>[...v,normalise(data[0],"feed")]);showToast("Post duplicated");
   };
   const isMob=useIsMobile();
   const toggleWeek=w=>setCollapsedWeeks(c=>({...c,[w]:!c[w]}));
   const detailRef=useRef(null);
+  const editFormRef=useRef(null);
   useEffect(()=>{
     if(selected&&detailRef.current&&!isMob){
       detailRef.current.scrollIntoView({behavior:"smooth",block:"start"});
     }
   },[selected]);
+  useEffect(()=>{
+    if(editing&&editFormRef.current){
+      editFormRef.current.scrollIntoView({behavior:"smooth",block:"start"});
+    }
+  },[editing]);
 
   return(
     <div>
       <PillarTracker items={posts}/>
       <ContentStats items={posts} label="Feed posts"/>
       <FilterBar filter={filter} setFilter={setFilter} view={view} setView={setView} onAdd={isAdmin?()=>{setAdding(true);setSelected(null);setEditing(null);}:null}/>
+      {toast&&<Toast msg={toast.msg} type={toast.type} onDone={()=>setToast(null)}/>}
       {adding&&<PostForm type="feed" onAdd={add} onCancel={()=>setAdding(false)} month={month} year={year}/>}
-      {editing&&edP&&<EditForm post={edP} type="feed" onSave={upd} onCancel={()=>setEditing(null)}/>}
+      {editing&&edP&&<div ref={editFormRef}><EditForm post={edP} type="feed" onSave={upd} onCancel={()=>setEditing(null)}/></div>}
       {loading&&<div style={{textAlign:"center",padding:"60px 20px",fontFamily:IN,fontSize:13,fontWeight:600,color:TX3}}>Loading...</div>}
       {!loading&&posts.length===0&&!adding&&(
         <div style={{textAlign:"center",padding:"70px 20px",border:`1px dashed ${BORDER}`,borderRadius:12}}>
@@ -885,6 +904,8 @@ function StoriesTab({month,year}){
   const[filter,setFilter]=useState("All");
   const[comment,setComment]=useState("");
   const[collapsedWeeks,setCollapsedWeeks]=useState({});
+  const[toast,setToast]=useState(null);
+  const showToast=(msg,type="success")=>setToast({msg,type});
 
   useEffect(()=>{
     setLoading(true);setSelected(null);setCollapsedWeeks({});
@@ -897,10 +918,20 @@ function StoriesTab({month,year}){
   const sorted=sortOldestFirst(seqs);
   const filt=filter==="All"?sorted:sorted.filter(s=>s.status===filter);
 
-  const add=s=>{setSeqs(v=>[...v,s]);setAdding(false);setSelected(s.id);};
-  const del=async id=>{await supabase.from("story_sequences").delete().eq("id",id);setSeqs(v=>v.filter(s=>s.id!==id));setSelected(null);};
-  const upd=s=>{setSeqs(v=>v.map(x=>x.id===s.id?s:x));setEditing(null);setSelected(s.id);};
-  const setSt=async(id,st)=>{await supabase.from("story_sequences").update({status:st}).eq("id",id);setSeqs(v=>v.map(s=>s.id===id?{...s,status:st}:s));};
+  const add=s=>{setSeqs(v=>[...v,s]);setAdding(false);setSelected(s.id);showToast("Sequence added");};
+  const del=async id=>{
+    if(!window.confirm("Delete this sequence? This cannot be undone.")) return;
+    const{error}=await supabase.from("story_sequences").delete().eq("id",id);
+    if(error){showToast("Delete failed: "+error.message,"error");return;}
+    setSeqs(v=>v.filter(s=>s.id!==id));setSelected(null);showToast("Sequence deleted");
+  };
+  const upd=s=>{setSeqs(v=>v.map(x=>x.id===s.id?s:x));setEditing(null);setSelected(s.id);showToast("Changes saved");};
+  const setSt=async(id,st)=>{
+    const{error}=await supabase.from("story_sequences").update({status:st}).eq("id",id);
+    if(error){showToast("Update failed","error");return;}
+    setSeqs(v=>v.map(s=>s.id===id?{...s,status:st}:s));
+    showToast(st==="Approved"?"Sequence approved":st==="For Revision"?"Marked for revision":"Status updated");
+  };
   const addC=async id=>{if(!comment.trim()) return;const seq=seqs.find(s=>s.id===id);const nc=[...(seq.comments||[]),comment.trim()];await supabase.from("story_sequences").update({comments:nc}).eq("id",id);setSeqs(v=>v.map(s=>s.id===id?{...s,comments:nc}:s));setComment("");};
   const editComment=async(id,idx,text)=>{const seq=seqs.find(s=>s.id===id);const nc=(seq.comments||[]).map((c,i)=>i===idx?text:c);await supabase.from("story_sequences").update({comments:nc}).eq("id",id);setSeqs(v=>v.map(s=>s.id===id?{...s,comments:nc}:s));};
   const delComment=async(id,idx)=>{const seq=seqs.find(s=>s.id===id);const nc=(seq.comments||[]).filter((_,i)=>i!==idx);await supabase.from("story_sequences").update({comments:nc}).eq("id",id);setSeqs(v=>v.map(s=>s.id===id?{...s,comments:nc}:s));};
@@ -908,17 +939,23 @@ function StoriesTab({month,year}){
     const orig=seqs.find(s=>s.id===id);if(!orig) return;
     const payload={month,year,week:orig.week,day:orig.day,type:orig.type,pillar:orig.pillar,frames:orig.frames||"",caption:orig.caption||"",status:"Draft",comments:[],image_urls:orig.images||[]};
     const{data,error}=await supabase.from("story_sequences").insert([payload]).select();
-    if(error){alert("Duplicate failed: "+error.message);return;}
-    setSeqs(v=>[...v,normalise(data[0],"story")]);
+    if(error){showToast("Duplicate failed","error");return;}
+    setSeqs(v=>[...v,normalise(data[0],"story")]);showToast("Sequence duplicated");
   };
   const isMob=useIsMobile();
   const toggleWeek=w=>setCollapsedWeeks(c=>({...c,[w]:!c[w]}));
   const detailRef=useRef(null);
+  const editFormRef=useRef(null);
   useEffect(()=>{
     if(selected&&detailRef.current&&!isMob){
       detailRef.current.scrollIntoView({behavior:"smooth",block:"start"});
     }
   },[selected]);
+  useEffect(()=>{
+    if(editing&&editFormRef.current){
+      editFormRef.current.scrollIntoView({behavior:"smooth",block:"start"});
+    }
+  },[editing]);
 
   return(
     <div>
@@ -934,8 +971,9 @@ function StoriesTab({month,year}){
         </div>
         {isAdmin&&<button onClick={()=>{setAdding(true);setSelected(null);setEditing(null);}} style={{padding:"5px 16px",fontFamily:IN,fontSize:11,fontWeight:700,borderRadius:20,border:`1px solid ${TEAL}`,cursor:"pointer",background:`${TEAL}18`,color:TEAL,letterSpacing:"0.03em"}}>+ Add sequence</button>}
       </div>
+      {toast&&<Toast msg={toast.msg} type={toast.type} onDone={()=>setToast(null)}/>}
       {adding&&<PostForm type="story" onAdd={add} onCancel={()=>setAdding(false)} month={month} year={year}/>}
-      {editing&&edS&&<EditForm post={edS} type="story" onSave={upd} onCancel={()=>setEditing(null)}/>}
+      {editing&&edS&&<div ref={editFormRef}><EditForm post={edS} type="story" onSave={upd} onCancel={()=>setEditing(null)}/></div>}
       {loading&&<div style={{textAlign:"center",padding:"60px 20px",fontFamily:IN,fontSize:13,fontWeight:600,color:TX3}}>Loading...</div>}
       {!loading&&seqs.length===0&&!adding&&(
         <div style={{textAlign:"center",padding:"70px 20px",border:`1px dashed ${BORDER}`,borderRadius:12}}>
@@ -1050,6 +1088,25 @@ function Login({onLogin}){
         <button onClick={submit} style={{width:"100%",padding:"12px",fontFamily:IN,fontSize:13,fontWeight:700,borderRadius:10,
           border:`1px solid ${TEAL}`,cursor:"pointer",background:`${TEAL}22`,color:TEAL}}>Enter</button>
       </div>
+    </div>
+  );
+}
+
+// ── Toast ─────────────────────────────────────────────────────────
+function Toast({msg,type,onDone}){
+  useEffect(()=>{const t=setTimeout(onDone,2800);return()=>clearTimeout(t);},[]);
+  const styles={
+    success:{bg:"#0A2420",color:TEAL,   border:"#0F6E56"},
+    error:  {bg:"#2A0C08",color:CORAL,  border:"#712B13"},
+    warn:   {bg:"#1A1408",color:"#FFD580",border:"#8B6914"},
+  };
+  const st=styles[type]||styles.success;
+  return(
+    <div style={{position:"fixed",top:20,left:"50%",transform:"translateX(-50%)",zIndex:9999,
+      background:st.bg,border:`1px solid ${st.border}`,color:st.color,
+      fontFamily:IN,fontSize:13,fontWeight:700,padding:"10px 22px",borderRadius:10,
+      boxShadow:"0 4px 24px rgba(0,0,0,0.6)",pointerEvents:"none",whiteSpace:"nowrap",letterSpacing:"0.02em"}}>
+      {msg}
     </div>
   );
 }
