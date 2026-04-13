@@ -24,19 +24,18 @@ const PILLAR_TARGETS = { "Transformation":30,"Education":25,"BTS & Culture":20,"
 const DAYS      = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 const DAY_IDX   = { Mon:0,Tue:1,Wed:2,Thu:3,Fri:4,Sat:5,Sun:6 };
 const FORMATS   = ["Reel","Carousel","Static","Testimonial","Story Reel"];
-const CMS_YEAR  = 2026;
 // Returns ["1","2",...] for however many Mon-started weeks the month contains
-function getWeeksForMonth(m){
+function getWeeksForMonth(m,yr){
   const idx=MONTHS.indexOf(m); if(idx===-1) return["1","2","3","4"];
-  const first=new Date(CMS_YEAR,idx,1), last=new Date(CMS_YEAR,idx+1,0);
+  const first=new Date(yr,idx,1), last=new Date(yr,idx+1,0);
   let n=1; const d=new Date(first); d.setDate(2);
   while(d<=last){if(d.getDay()===1)n++; d.setDate(d.getDate()+1);}
   return Array.from({length:n},(_,i)=>String(i+1));
 }
 // Returns "1–5" style date range string for a given week within a month
-function getWeekDateRange(m,wk){
+function getWeekDateRange(m,wk,yr){
   const idx=MONTHS.indexOf(m); if(idx===-1) return"";
-  const first=new Date(CMS_YEAR,idx,1), last=new Date(CMS_YEAR,idx+1,0);
+  const first=new Date(yr,idx,1), last=new Date(yr,idx+1,0);
   let cur=1,ws=1;
   for(let d=new Date(first);d<=last;d.setDate(d.getDate()+1)){
     const dt=d.getDate(),dow=d.getDay();
@@ -418,7 +417,7 @@ function ContentStats({items,label}){
   );
 }
 
-function PostForm({onAdd,onCancel,type,month}){
+function PostForm({onAdd,onCancel,type,month,year}){
   const blank=type==="feed"
     ?{week:"1",day:"Mon",pillar:"Transformation",format:"Reel",subject:"",caption:"",hashtags:"",status:"Draft",comments:[],images:[],video:[]}
     :{week:"1",day:"Mon",type:"Unique — BTS moment",pillar:"BTS & Culture",frames:"",caption:"",status:"Draft",comments:[],images:[]};
@@ -435,8 +434,8 @@ function PostForm({onAdd,onCancel,type,month}){
       const vids=await uploadFiles(d.video||[]);
       const table=type==="feed"?"feed_posts":"story_sequences";
       const payload=type==="feed"
-        ?{month,week:d.week,day:d.day,pillar:d.pillar,format:d.format,subject:d.subject,caption:d.caption,hashtags:d.hashtags,status:d.status,comments:[],image_urls:imgs,video_url:vids[0]?.url||null}
-        :{month,week:d.week,day:d.day,type:d.type,pillar:d.pillar,frames:d.frames,caption:d.caption,status:d.status,comments:[],image_urls:imgs};
+        ?{month,year,week:d.week,day:d.day,pillar:d.pillar,format:d.format,subject:d.subject,caption:d.caption,hashtags:d.hashtags,status:d.status,comments:[],image_urls:imgs,video_url:vids[0]?.url||null}
+        :{month,year,week:d.week,day:d.day,type:d.type,pillar:d.pillar,frames:d.frames,caption:d.caption,status:d.status,comments:[],image_urls:imgs};
       const{data,error}=await supabase.from(table).insert([payload]).select();
       if(error) throw error;
       onAdd(normalise(data[0],type));
@@ -446,7 +445,7 @@ function PostForm({onAdd,onCancel,type,month}){
   return(
     <Shell title={type==="feed"?"New feed post":"New story sequence"} onCancel={onCancel} onSave={save} saveLabel="Save post" saving={saving}>
       <div style={{display:"grid",gridTemplateColumns:isMob?"1fr":"1fr 1fr 1fr",gap:10,marginBottom:4}}>
-        <FRow label="Week"><Sel value={d.week} onChange={v=>u("week",v)}>{getWeeksForMonth(month).map(w=><option key={w} value={w}>Week {w} · {getWeekDateRange(month,w)}</option>)}</Sel></FRow>
+        <FRow label="Week"><Sel value={d.week} onChange={v=>u("week",v)}>{getWeeksForMonth(month,year).map(w=><option key={w} value={w}>Week {w} · {getWeekDateRange(month,w,year)}</option>)}</Sel></FRow>
         <FRow label="Day"><Sel value={d.day} onChange={v=>u("day",v)}>{DAYS.map(x=><option key={x}>{x}</option>)}</Sel></FRow>
         {type==="feed"?<FRow label="Format"><Sel value={d.format} onChange={v=>u("format",v)}>{FORMATS.map(x=><option key={x}>{x}</option>)}</Sel></FRow>
           :<FRow label="Story type"><Sel value={d.type} onChange={v=>u("type",v)}>{STORY_TYPES.map(x=><option key={x}>{x}</option>)}</Sel></FRow>}
@@ -476,6 +475,7 @@ function EditForm({post,onSave,onCancel,type}){
   const isMob=useIsMobile();
   const ss=getSS(d.status);
   const month=post.month||"January";
+  const year=post.year||new Date().getFullYear();
   const save=async()=>{
     setSaving(true);
     try{
@@ -494,7 +494,7 @@ function EditForm({post,onSave,onCancel,type}){
   return(
     <Shell title="Edit post" rule={GREEN} onCancel={onCancel} onSave={save} saveLabel="Save changes" saving={saving}>
       <div style={{display:"grid",gridTemplateColumns:isMob?"1fr":"1fr 1fr 1fr",gap:10,marginBottom:4}}>
-        <FRow label="Week"><Sel value={d.week} onChange={v=>u("week",v)}>{getWeeksForMonth(month).map(w=><option key={w} value={w}>Week {w} · {getWeekDateRange(month,w)}</option>)}</Sel></FRow>
+        <FRow label="Week"><Sel value={d.week} onChange={v=>u("week",v)}>{getWeeksForMonth(month,year).map(w=><option key={w} value={w}>Week {w} · {getWeekDateRange(month,w,year)}</option>)}</Sel></FRow>
         <FRow label="Day"><Sel value={d.day} onChange={v=>u("day",v)}>{DAYS.map(x=><option key={x}>{x}</option>)}</Sel></FRow>
         {type==="feed"?<FRow label="Format"><Sel value={d.format} onChange={v=>u("format",v)}>{FORMATS.map(x=><option key={x}>{x}</option>)}</Sel></FRow>
           :<FRow label="Story type"><Sel value={d.type} onChange={v=>u("type",v)}>{STORY_TYPES.map(x=><option key={x}>{x}</option>)}</Sel></FRow>}
@@ -769,7 +769,7 @@ function CalRow({p,selected,onSelect,onDelete,onDup}){
 
 // ── Feed Tab ──────────────────────────────────────────────────────
 
-function FeedTab({month}){
+function FeedTab({month,year}){
   const isAdmin=useRole()==="admin";
   const[posts,setPosts]=useState([]);
   const[loading,setLoading]=useState(true);
@@ -783,9 +783,9 @@ function FeedTab({month}){
 
   useEffect(()=>{
     setLoading(true);setSelected(null);setCollapsedWeeks({});
-    supabase.from("feed_posts").select("*").eq("month",month).order("created_at",{ascending:true})
+    supabase.from("feed_posts").select("*").eq("month",month).eq("year",year).order("created_at",{ascending:true})
       .then(({data})=>{setPosts(data?data.map(r=>normalise(r,"feed")):[]);setLoading(false);});
-  },[month]);
+  },[month,year]);
 
   const sel=posts.find(p=>p.id===selected)||null;
   const edP=posts.find(p=>p.id===editing)||null;
@@ -801,7 +801,7 @@ function FeedTab({month}){
   const delComment=async(id,idx)=>{const post=posts.find(p=>p.id===id);const nc=(post.comments||[]).filter((_,i)=>i!==idx);await supabase.from("feed_posts").update({comments:nc}).eq("id",id);setPosts(v=>v.map(p=>p.id===id?{...p,comments:nc}:p));};
   const dup=async id=>{
     const orig=posts.find(p=>p.id===id);if(!orig) return;
-    const payload={month,week:orig.week,day:orig.day,pillar:orig.pillar,format:orig.format,subject:(orig.subject||"")+" (copy)",caption:orig.caption||"",hashtags:orig.hashtags||"",status:"Draft",comments:[],image_urls:orig.images||[],video_url:orig.video?.[0]?.url||null};
+    const payload={month,year,week:orig.week,day:orig.day,pillar:orig.pillar,format:orig.format,subject:(orig.subject||"")+" (copy)",caption:orig.caption||"",hashtags:orig.hashtags||"",status:"Draft",comments:[],image_urls:orig.images||[],video_url:orig.video?.[0]?.url||null};
     const{data,error}=await supabase.from("feed_posts").insert([payload]).select();
     if(error){alert("Duplicate failed: "+error.message);return;}
     setPosts(v=>[...v,normalise(data[0],"feed")]);
@@ -820,7 +820,7 @@ function FeedTab({month}){
       <PillarTracker items={posts}/>
       <ContentStats items={posts} label="Feed posts"/>
       <FilterBar filter={filter} setFilter={setFilter} view={view} setView={setView} onAdd={isAdmin?()=>{setAdding(true);setSelected(null);setEditing(null);}:null}/>
-      {adding&&<PostForm type="feed" onAdd={add} onCancel={()=>setAdding(false)} month={month}/>}
+      {adding&&<PostForm type="feed" onAdd={add} onCancel={()=>setAdding(false)} month={month} year={year}/>}
       {editing&&edP&&<EditForm post={edP} type="feed" onSave={upd} onCancel={()=>setEditing(null)}/>}
       {loading&&<div style={{textAlign:"center",padding:"60px 20px",fontFamily:IN,fontSize:13,fontWeight:600,color:TX3}}>Loading...</div>}
       {!loading&&posts.length===0&&!adding&&(
@@ -846,7 +846,7 @@ function FeedTab({month}){
       <div style={{display:"grid",gridTemplateColumns:!isMob&&sel&&!editing?"1fr 360px":"1fr",gap:16,alignItems:"start"}}>
         <div>
           {view==="calendar"?(
-            getWeeksForMonth(month).map(w=>{
+            getWeeksForMonth(month,year).map(w=>{
               const wp=filt.filter(p=>p.week===w);
               if(!wp.length) return null;
               const collapsed=!!collapsedWeeks[w];
@@ -855,7 +855,7 @@ function FeedTab({month}){
                   <div onClick={()=>toggleWeek(w)} style={{display:"flex",alignItems:"center",gap:10,marginBottom:collapsed?0:10,paddingBottom:8,borderBottom:`1px solid ${BORDER2}`,cursor:"pointer",userSelect:"none"}}>
                     <div style={{width:3,height:14,background:TEAL,borderRadius:2,flexShrink:0}}/>
                     <div style={{fontFamily:PF,fontWeight:700,fontStyle:"italic",fontSize:16,color:TX2}}>Week {w}</div>
-                    <div style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX3}}>{month.slice(0,3)} {getWeekDateRange(month,w)}</div>
+                    <div style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX3}}>{month.slice(0,3)} {getWeekDateRange(month,w,year)}</div>
                     <div style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX4}}>{wp.length} post{wp.length!==1?"s":""}</div>
                     <div style={{marginLeft:"auto",fontFamily:IN,fontSize:11,color:TX4}}>{collapsed?"▶":"▼"}</div>
                   </div>
@@ -875,7 +875,7 @@ function FeedTab({month}){
 
 // ── Stories Tab ───────────────────────────────────────────────────
 
-function StoriesTab({month}){
+function StoriesTab({month,year}){
   const isAdmin=useRole()==="admin";
   const[seqs,setSeqs]=useState([]);
   const[loading,setLoading]=useState(true);
@@ -888,9 +888,9 @@ function StoriesTab({month}){
 
   useEffect(()=>{
     setLoading(true);setSelected(null);setCollapsedWeeks({});
-    supabase.from("story_sequences").select("*").eq("month",month).order("created_at",{ascending:true})
+    supabase.from("story_sequences").select("*").eq("month",month).eq("year",year).order("created_at",{ascending:true})
       .then(({data})=>{setSeqs(data?data.map(r=>normalise(r,"story")):[]);setLoading(false);});
-  },[month]);
+  },[month,year]);
 
   const sel=seqs.find(s=>s.id===selected)||null;
   const edS=seqs.find(s=>s.id===editing)||null;
@@ -906,7 +906,7 @@ function StoriesTab({month}){
   const delComment=async(id,idx)=>{const seq=seqs.find(s=>s.id===id);const nc=(seq.comments||[]).filter((_,i)=>i!==idx);await supabase.from("story_sequences").update({comments:nc}).eq("id",id);setSeqs(v=>v.map(s=>s.id===id?{...s,comments:nc}:s));};
   const dup=async id=>{
     const orig=seqs.find(s=>s.id===id);if(!orig) return;
-    const payload={month,week:orig.week,day:orig.day,type:orig.type,pillar:orig.pillar,frames:orig.frames||"",caption:orig.caption||"",status:"Draft",comments:[],image_urls:orig.images||[]};
+    const payload={month,year,week:orig.week,day:orig.day,type:orig.type,pillar:orig.pillar,frames:orig.frames||"",caption:orig.caption||"",status:"Draft",comments:[],image_urls:orig.images||[]};
     const{data,error}=await supabase.from("story_sequences").insert([payload]).select();
     if(error){alert("Duplicate failed: "+error.message);return;}
     setSeqs(v=>[...v,normalise(data[0],"story")]);
@@ -934,7 +934,7 @@ function StoriesTab({month}){
         </div>
         {isAdmin&&<button onClick={()=>{setAdding(true);setSelected(null);setEditing(null);}} style={{padding:"5px 16px",fontFamily:IN,fontSize:11,fontWeight:700,borderRadius:20,border:`1px solid ${TEAL}`,cursor:"pointer",background:`${TEAL}18`,color:TEAL,letterSpacing:"0.03em"}}>+ Add sequence</button>}
       </div>
-      {adding&&<PostForm type="story" onAdd={add} onCancel={()=>setAdding(false)} month={month}/>}
+      {adding&&<PostForm type="story" onAdd={add} onCancel={()=>setAdding(false)} month={month} year={year}/>}
       {editing&&edS&&<EditForm post={edS} type="story" onSave={upd} onCancel={()=>setEditing(null)}/>}
       {loading&&<div style={{textAlign:"center",padding:"60px 20px",fontFamily:IN,fontSize:13,fontWeight:600,color:TX3}}>Loading...</div>}
       {!loading&&seqs.length===0&&!adding&&(
@@ -959,7 +959,7 @@ function StoriesTab({month}){
       )}
       <div style={{display:"grid",gridTemplateColumns:!isMob&&sel&&!editing?"1fr 360px":"1fr",gap:16,alignItems:"start"}}>
         <div>
-          {getWeeksForMonth(month).map(w=>{
+          {getWeeksForMonth(month,year).map(w=>{
             const wp=filt.filter(s=>s.week===w);
             if(!wp.length) return null;
             const collapsed=!!collapsedWeeks[w];
@@ -968,7 +968,7 @@ function StoriesTab({month}){
                 <div onClick={()=>toggleWeek(w)} style={{display:"flex",alignItems:"center",gap:10,marginBottom:collapsed?0:10,paddingBottom:8,borderBottom:`1px solid ${BORDER2}`,cursor:"pointer",userSelect:"none"}}>
                   <div style={{width:3,height:14,background:PURPLE,borderRadius:2,flexShrink:0}}/>
                   <div style={{fontFamily:PF,fontWeight:700,fontStyle:"italic",fontSize:16,color:TX2}}>Week {w}</div>
-                  <div style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX3}}>{month.slice(0,3)} {getWeekDateRange(month,w)}</div>
+                  <div style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX3}}>{month.slice(0,3)} {getWeekDateRange(month,w,year)}</div>
                   <div style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX4}}>{wp.length} sequence{wp.length!==1?"s":""}</div>
                   <div style={{marginLeft:"auto",fontFamily:IN,fontSize:11,color:TX4}}>{collapsed?"▶":"▼"}</div>
                 </div>
@@ -1057,13 +1057,17 @@ function Login({onLogin}){
 // ── App ───────────────────────────────────────────────────────────
 
 export default function App(){
-  const _z="CMS_MARKER_UNIQUE_12345";
-  const[month,setMonth]=useState("April");
+  const[month,setMonth]=useState(()=>MONTHS[new Date().getMonth()]);
+  const[year,setYear]=useState(()=>new Date().getFullYear());
   const[tab,setTab]=useState("Feed Calendar");
   const[sideOpen,setSideOpen]=useState(false);
   const isMob=useIsMobile();
-  const[role,setRole]=useState(()=>{const r=localStorage.getItem("cms_role");return["admin","client","team"].includes(r)?r:null;});
-  if(!role) return <Login onLogin={r=>{localStorage.setItem("cms_role",r);setRole(r);}}/>;
+  const[role,setRole]=useState(()=>{const r=localStorage.getItem("cms_role");return["admin","client","team"].includes(r)?r:"team";});
+  const[signingIn,setSigningIn]=useState(false);
+  const[code,setCode]=useState("");
+  const[codeErr,setCodeErr]=useState(false);
+  const signOut=()=>{localStorage.removeItem("cms_role");setRole("team");setSigningIn(false);setCode("");};
+  const trySignIn=()=>{const r=ROLE_CODES[code.trim()];if(r){localStorage.setItem("cms_role",r);setRole(r);setCode("");setSigningIn(false);setCodeErr(false);}else{setCodeErr(true);setTimeout(()=>setCodeErr(false),2500);}};
 
   const sidebarContent=(
     <>
@@ -1071,16 +1075,39 @@ export default function App(){
         <div style={{width:32,height:2,background:TEAL,borderRadius:1,marginBottom:12}}/>
         <div style={{fontFamily:IN,fontSize:11,fontWeight:700,color:TX1,letterSpacing:"0.12em",textTransform:"uppercase"}}>Tara Rose</div>
         <div style={{fontFamily:IN,fontSize:9,fontWeight:600,color:TEAL,letterSpacing:"0.12em",textTransform:"uppercase",marginTop:3}}>Content System</div>
-        <div style={{marginTop:12,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-          <span style={{fontFamily:IN,fontSize:10,fontWeight:700,background:`${TEAL}22`,color:TEAL,border:`1px solid ${TEAL}55`,borderRadius:20,padding:"3px 10px",letterSpacing:"0.06em",textTransform:"uppercase"}}>{role}</span>
-          <button onClick={()=>{localStorage.removeItem("cms_role");setRole(null);}} style={{fontFamily:IN,fontSize:10,fontWeight:700,color:TX2,border:`1px solid ${BORDER}`,background:SURF3,borderRadius:6,cursor:"pointer",padding:"3px 10px",letterSpacing:"0.04em"}}>Sign out</button>
-        </div>
+        {signingIn?(
+          <div style={{marginTop:12}}>
+            <input type="password" value={code} onChange={e=>{setCode(e.target.value);setCodeErr(false);}} onKeyDown={e=>e.key==="Enter"&&trySignIn()} autoFocus placeholder="Access code"
+              style={{width:"100%",fontFamily:IN,fontWeight:600,fontSize:12,padding:"7px 10px",borderRadius:8,border:`1px solid ${codeErr?CORAL:BORDER}`,background:SURF2,color:TX1,boxSizing:"border-box",outline:"none"}}/>
+            {codeErr&&<div style={{fontFamily:IN,fontSize:10,fontWeight:600,color:CORAL,marginTop:4}}>Incorrect code.</div>}
+            <div style={{display:"flex",gap:6,marginTop:8}}>
+              <button onClick={trySignIn} style={{flex:1,fontFamily:IN,fontSize:11,fontWeight:700,padding:"6px 0",borderRadius:8,border:`1px solid ${TEAL}`,background:`${TEAL}18`,color:TEAL,cursor:"pointer"}}>Enter</button>
+              <button onClick={()=>{setSigningIn(false);setCode("");setCodeErr(false);}} style={{fontFamily:IN,fontSize:11,fontWeight:700,padding:"6px 10px",borderRadius:8,border:`1px solid ${BORDER}`,background:"none",color:TX3,cursor:"pointer"}}>Cancel</button>
+            </div>
+          </div>
+        ):role!=="team"?(
+          <div style={{marginTop:12,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+            <span style={{fontFamily:IN,fontSize:10,fontWeight:700,background:`${TEAL}22`,color:TEAL,border:`1px solid ${TEAL}55`,borderRadius:20,padding:"3px 10px",letterSpacing:"0.06em",textTransform:"uppercase"}}>{role}</span>
+            <button onClick={signOut} style={{fontFamily:IN,fontSize:10,fontWeight:700,color:TX2,border:`1px solid ${BORDER}`,background:SURF3,borderRadius:6,cursor:"pointer",padding:"3px 10px",letterSpacing:"0.04em"}}>Sign out</button>
+          </div>
+        ):(
+          <div style={{marginTop:12,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+            <span style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX3,letterSpacing:"0.06em",textTransform:"uppercase"}}>Team view</span>
+            <button onClick={()=>setSigningIn(true)} style={{fontFamily:IN,fontSize:10,fontWeight:700,color:TEAL,border:`1px solid ${TEAL}55`,background:`${TEAL}18`,borderRadius:6,cursor:"pointer",padding:"3px 10px",letterSpacing:"0.04em"}}>Sign in</button>
+          </div>
+        )}
       </div>
       <div style={{padding:"20px 12px 12px"}}>
         <div style={{fontFamily:IN,fontSize:9,fontWeight:600,color:TX3,letterSpacing:"0.1em",textTransform:"uppercase",padding:"0 8px",marginBottom:8}}>Views</div>
         {NAV_ITEMS.map(item=>{const active=tab===item;return<button key={item} onClick={()=>{setTab(item);setSideOpen(false);}} style={{width:"100%",display:"block",textAlign:"left",padding:"9px 12px",borderRadius:8,border:"none",cursor:"pointer",background:active?`${TEAL}18`:"transparent",color:active?TEAL:TX2,fontFamily:IN,fontSize:13,fontWeight:active?700:600,marginBottom:2}}>{item}</button>;})}
       </div>
       <div style={{padding:"8px 12px"}}>
+        <div style={{fontFamily:IN,fontSize:9,fontWeight:600,color:TX3,letterSpacing:"0.1em",textTransform:"uppercase",padding:"0 8px",marginBottom:8}}>Year</div>
+        <div style={{display:"flex",alignItems:"center",gap:6,padding:"0 8px",marginBottom:12}}>
+          <button onClick={()=>setYear(y=>y-1)} style={{border:`1px solid ${BORDER}`,background:SURF3,color:TX2,borderRadius:6,cursor:"pointer",fontFamily:IN,fontSize:14,fontWeight:700,width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center"}}>←</button>
+          <span style={{fontFamily:IN,fontSize:13,fontWeight:700,color:TX1,flex:1,textAlign:"center"}}>{year}</span>
+          <button onClick={()=>setYear(y=>y+1)} style={{border:`1px solid ${BORDER}`,background:SURF3,color:TX2,borderRadius:6,cursor:"pointer",fontFamily:IN,fontSize:14,fontWeight:700,width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center"}}>→</button>
+        </div>
         <div style={{fontFamily:IN,fontSize:9,fontWeight:600,color:TX3,letterSpacing:"0.1em",textTransform:"uppercase",padding:"0 8px",marginBottom:8}}>Month</div>
         {MONTHS.map(m=>{const active=month===m;return<button key={m} onClick={()=>{setMonth(m);setSideOpen(false);}} style={{width:"100%",display:"block",textAlign:"left",padding:"7px 12px",borderRadius:8,border:"none",cursor:"pointer",background:active?SURF3:"transparent",color:active?TX1:TX3,fontFamily:IN,fontSize:12,fontWeight:active?700:600,marginBottom:1}}>{m}</button>;})}
       </div>
@@ -1115,24 +1142,30 @@ export default function App(){
           </button>
           <div style={{flex:1}}>
             <div style={{fontFamily:IN,fontSize:13,fontWeight:700,color:TX1}}>{tab}</div>
-            <div style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX3}}>{month}</div>
+            <div style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX3}}>{month} {year}</div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-            <span style={{fontFamily:IN,fontSize:10,fontWeight:700,background:`${TEAL}22`,color:TEAL,border:`1px solid ${TEAL}55`,borderRadius:20,padding:"3px 9px",letterSpacing:"0.06em",textTransform:"uppercase"}}>{role}</span>
-            <button onClick={()=>{localStorage.removeItem("cms_role");setRole(null);}} style={{fontFamily:IN,fontSize:11,fontWeight:700,color:TX2,border:`1px solid ${BORDER}`,background:SURF3,borderRadius:6,cursor:"pointer",padding:"4px 10px"}}>Sign out</button>
+            {role!=="team"?(
+              <>
+                <span style={{fontFamily:IN,fontSize:10,fontWeight:700,background:`${TEAL}22`,color:TEAL,border:`1px solid ${TEAL}55`,borderRadius:20,padding:"3px 9px",letterSpacing:"0.06em",textTransform:"uppercase"}}>{role}</span>
+                <button onClick={signOut} style={{fontFamily:IN,fontSize:11,fontWeight:700,color:TX2,border:`1px solid ${BORDER}`,background:SURF3,borderRadius:6,cursor:"pointer",padding:"4px 10px"}}>Sign out</button>
+              </>
+            ):(
+              <button onClick={()=>{setSideOpen(true);setSigningIn(true);}} style={{fontFamily:IN,fontSize:11,fontWeight:700,color:TEAL,border:`1px solid ${TEAL}55`,background:`${TEAL}18`,borderRadius:6,cursor:"pointer",padding:"4px 10px"}}>Sign in</button>
+            )}
           </div>
         </div>}
 
         <div style={{padding:isMob?"16px 14px":"32px 28px"}}>
           {!isMob&&<div style={{marginBottom:28}}>
-            <Label>Content System · 2026</Label>
+            <Label>Content System · {year}</Label>
             <SectionRule color={TEAL}/>
             <HL size={32}>{tab}</HL>
-            <div style={{fontFamily:IN,fontSize:12,fontWeight:600,color:TX3,marginTop:6}}>{month} · Four locations · Dubai and Abu Dhabi</div>
+            <div style={{fontFamily:IN,fontSize:12,fontWeight:600,color:TX3,marginTop:6}}>{month} {year} · Four locations · Dubai and Abu Dhabi</div>
           </div>}
-          <div key={month+tab}>
-            {tab==="Feed Calendar"&&<FeedTab month={month}/>}
-            {tab==="Stories"&&<StoriesTab month={month}/>}
+          <div key={month+year+tab}>
+            {tab==="Feed Calendar"&&<FeedTab month={month} year={year}/>}
+            {tab==="Stories"&&<StoriesTab month={month} year={year}/>}
             {tab==="Analytics"&&(
               <div style={{textAlign:"center",padding:"80px 20px",border:`1px dashed ${BORDER}`,borderRadius:12}}>
                 <SectionRule color={PURPLE}/>
