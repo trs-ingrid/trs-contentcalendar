@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, createContext, useContext } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -30,6 +30,14 @@ const STORY_TYPES = ["Unique — BTS moment","Unique — Poll / Quiz","Unique �
 // zoom=0 → smallest grid (zoom out, more rows visible); zoom=4 → full-width grid (zoom in, fewer rows visible)
 const GRID_ZOOM_WIDTHS = [42, 58, 74, 87, 100];
 const NAV_ITEMS = ["Feed Calendar","Stories","Analytics"];
+const RoleCtx=createContext("team");
+const useRole=()=>useContext(RoleCtx);
+// Set VITE_ADMIN_CODE / VITE_CLIENT_CODE / VITE_TEAM_CODE in Netlify env vars to change passcodes
+const ROLE_CODES={
+  [import.meta.env.VITE_ADMIN_CODE||"trs-admin"]:"admin",
+  [import.meta.env.VITE_CLIENT_CODE||"trs-client"]:"client",
+  [import.meta.env.VITE_TEAM_CODE||"trs-team"]:"team",
+};
 
 const PF="'Playfair Display',Georgia,serif";
 const IN="'Inter',-apple-system,BlinkMacSystemFont,sans-serif";
@@ -238,20 +246,22 @@ function StoryFrameViewer({images}){
 // ── Approval ──────────────────────────────────────────────────────
 
 function ApprovalPanel({status,onChange}){
+  const role=useRole();
   const msgs={"Draft":"Not yet submitted.","For Review":"Waiting on client.","Approved":"Client approved — ready to schedule.","For Revision":"Changes requested — see comments.","Uploaded":"Live."};
   const s=getSS(status);
-  const actions=[{label:"For Review",s:"For Review"},{label:"Approve",s:"Approved"},{label:"For Revision",s:"For Revision"}];
+  const allActions=[{label:"For Review",s:"For Review"},{label:"Approve",s:"Approved"},{label:"For Revision",s:"For Revision"}];
+  const actions=role==="admin"?allActions:role==="client"?allActions.filter(a=>a.s==="Approved"||a.s==="For Revision"):[];
   return(
     <div style={{border:`1px solid ${s.border}`,borderRadius:10,overflow:"hidden",marginBottom:16}}>
-      <div style={{padding:"10px 14px",background:s.bg,borderBottom:`1px solid ${s.border}`,display:"flex",alignItems:"center",gap:10}}>
+      <div style={{padding:"10px 14px",background:s.bg,borderBottom:actions.length>0?`1px solid ${s.border}`:"none",display:"flex",alignItems:"center",gap:10}}>
         <div style={{width:7,height:7,borderRadius:"50%",background:s.color,flexShrink:0}}/>
         <div><Label>{status}</Label><div style={{fontFamily:IN,fontSize:12,fontWeight:600,color:s.color,marginTop:1}}>{msgs[status]}</div></div>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",background:SURF}}>
+      {actions.length>0&&<div style={{display:"grid",gridTemplateColumns:`repeat(${actions.length},1fr)`,background:SURF}}>
         {actions.map((a,i)=>{const as=getSS(a.s);const active=status===a.s;
-          return<button key={a.s} onClick={()=>onChange(a.s)} style={{padding:"10px 6px",fontFamily:IN,fontSize:12,fontWeight:600,border:"none",borderRight:i<2?`1px solid ${BORDER}`:"none",cursor:"pointer",background:active?as.bg:SURF,color:active?as.color:TX3}}>{a.label}</button>;
+          return<button key={a.s} onClick={()=>onChange(a.s)} style={{padding:"10px 6px",fontFamily:IN,fontSize:12,fontWeight:600,border:"none",borderRight:i<actions.length-1?`1px solid ${BORDER}`:"none",cursor:"pointer",background:active?as.bg:SURF,color:active?as.color:TX3}}>{a.label}</button>;
         })}
-      </div>
+      </div>}
     </div>
   );
 }
@@ -281,19 +291,19 @@ function Comments({comments,val,setVal,onAdd,onEdit,onDelete}){
             ):(
               <div style={{fontSize:13,fontFamily:IN,fontWeight:600,color:TX2,background:SURF2,borderRadius:8,padding:"8px 12px",border:`1px solid ${BORDER}`,lineHeight:1.6}}>
                 <div>{c}</div>
-                <div style={{display:"flex",gap:10,marginTop:5,borderTop:`1px solid ${BORDER2}`,paddingTop:5}}>
-                  <button onClick={()=>startEdit(i)} style={{border:"none",background:"none",cursor:"pointer",color:TX4,fontFamily:IN,fontSize:10,fontWeight:700,padding:0,letterSpacing:"0.04em"}}>EDIT</button>
-                  <button onClick={()=>onDelete&&onDelete(i)} style={{border:"none",background:"none",cursor:"pointer",color:CORAL,fontFamily:IN,fontSize:10,fontWeight:700,padding:0,letterSpacing:"0.04em"}}>DELETE</button>
-                </div>
+                {(onEdit||onDelete)&&<div style={{display:"flex",gap:10,marginTop:5,borderTop:`1px solid ${BORDER2}`,paddingTop:5}}>
+                  {onEdit&&<button onClick={()=>startEdit(i)} style={{border:"none",background:"none",cursor:"pointer",color:TX4,fontFamily:IN,fontSize:10,fontWeight:700,padding:0,letterSpacing:"0.04em"}}>EDIT</button>}
+                  {onDelete&&<button onClick={()=>onDelete(i)} style={{border:"none",background:"none",cursor:"pointer",color:CORAL,fontFamily:IN,fontSize:10,fontWeight:700,padding:0,letterSpacing:"0.04em"}}>DELETE</button>}
+                </div>}
               </div>
             )}
           </div>
         </div>
       ))}
-      <div style={{display:"flex",gap:8,marginTop:8}}>
+      {onAdd&&<div style={{display:"flex",gap:8,marginTop:8}}>
         <input value={val} onChange={e=>setVal(e.target.value)} onKeyDown={e=>e.key==="Enter"&&onAdd()} placeholder="Leave a comment..." style={{flex:1,fontFamily:IN,fontWeight:600,fontSize:13,padding:"8px 12px",borderRadius:8,border:`1px solid ${BORDER}`,background:SURF2,color:TX1}}/>
         <button onClick={onAdd} style={{padding:"8px 16px",fontFamily:IN,fontSize:12,fontWeight:700,borderRadius:8,border:`1px solid ${BORDER}`,cursor:"pointer",background:SURF3,color:TX2}}>Post</button>
-      </div>
+      </div>}
     </div>
   );
 }
@@ -489,6 +499,9 @@ function EditForm({post,onSave,onCancel,type}){
 // ── Post Detail ───────────────────────────────────────────────────
 
 function PostDetail({post,onClose,onStatus,onApproval,comment,setComment,onAddComment,onEdit,onDelete,onEditComment,onDeleteComment}){
+  const role=useRole();
+  const isAdmin=role==="admin";
+  const canComment=role==="admin"||role==="client";
   const pl=getPillar(post.pillar);
   const videoFiles=post.video||[];
   const imgFiles=post.images||[];
@@ -532,16 +545,16 @@ function PostDetail({post,onClose,onStatus,onApproval,comment,setComment,onAddCo
             <div key={l} style={{background:SURF2,borderRadius:8,padding:"10px 12px",border:`1px solid ${BORDER}`}}>
               <Label>{l}</Label>
               {i===0&&<Tag label={post.pillar} bg={getPillar(post.pillar).bg} color={getPillar(post.pillar).color}/>}
-              {i===1&&<StatusDrop value={post.status} onChange={onStatus}/>}
+              {i===1&&(isAdmin?<StatusDrop value={post.status} onChange={onStatus}/>:<StatusPill status={post.status}/>)}
               {i>1&&<div style={{fontFamily:IN,fontSize:13,fontWeight:700,color:TX1}}>{v}</div>}
             </div>
           ))}
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+        {isAdmin&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
           <button onClick={onEdit} style={{padding:"10px",fontFamily:IN,fontSize:13,fontWeight:700,borderRadius:8,border:`1px solid ${BORDER}`,cursor:"pointer",background:SURF2,color:TX2}}>Edit post</button>
           <button onClick={onDelete} style={{padding:"10px",fontFamily:IN,fontSize:13,fontWeight:700,borderRadius:8,border:`1px solid ${CORAL}55`,cursor:"pointer",background:`${CORAL}15`,color:CORAL}}>Delete</button>
-        </div>
-        <Comments comments={post.comments} val={comment} setVal={setComment} onAdd={onAddComment} onEdit={onEditComment} onDelete={onDeleteComment}/>
+        </div>}
+        <Comments comments={post.comments} val={comment} setVal={setComment} onAdd={canComment?onAddComment:null} onEdit={canComment?onEditComment:null} onDelete={canComment?onDeleteComment:null}/>
       </div>
       <div style={{height:18}}/>
     </div>
@@ -551,6 +564,9 @@ function PostDetail({post,onClose,onStatus,onApproval,comment,setComment,onAddCo
 // ── Story Detail ──────────────────────────────────────────────────
 
 function StoryDetail({seq,onClose,onStatus,onApproval,comment,setComment,onAddComment,onEdit,onDelete,onEditComment,onDeleteComment}){
+  const role=useRole();
+  const isAdmin=role==="admin";
+  const canComment=role==="admin"||role==="client";
   const pl=getPillar(seq.pillar);
   const imgs=seq.images||[];
   return(
@@ -592,13 +608,13 @@ function StoryDetail({seq,onClose,onStatus,onApproval,comment,setComment,onAddCo
         </div>
         <div style={{background:SURF2,borderRadius:8,padding:"10px 12px",border:`1px solid ${BORDER}`,marginBottom:14}}>
           <Label>Status</Label>
-          <StatusDrop value={seq.status} onChange={onStatus}/>
+          {isAdmin?<StatusDrop value={seq.status} onChange={onStatus}/>:<StatusPill status={seq.status}/>}
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+        {isAdmin&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
           <button onClick={onEdit} style={{padding:"10px",fontFamily:IN,fontSize:13,fontWeight:700,borderRadius:8,border:`1px solid ${BORDER}`,cursor:"pointer",background:SURF2,color:TX2}}>Edit</button>
           <button onClick={onDelete} style={{padding:"10px",fontFamily:IN,fontSize:13,fontWeight:700,borderRadius:8,border:`1px solid ${CORAL}55`,cursor:"pointer",background:`${CORAL}15`,color:CORAL}}>Delete</button>
-        </div>
-        <Comments comments={seq.comments} val={comment} setVal={setComment} onAdd={onAddComment} onEdit={onEditComment} onDelete={onDeleteComment}/>
+        </div>}
+        <Comments comments={seq.comments} val={comment} setVal={setComment} onAdd={canComment?onAddComment:null} onEdit={canComment?onEditComment:null} onDelete={canComment?onDeleteComment:null}/>
       </div>
     </div>
   );
@@ -674,7 +690,7 @@ function FilterBar({filter,setFilter,view,setView,onAdd}){
         {["calendar","grid"].map(v=>(
           <button key={v} onClick={()=>setView(v)} style={{padding:"5px 14px",fontFamily:IN,fontSize:11,fontWeight:600,borderRadius:20,border:`1px solid ${view===v?TEAL:BORDER}`,cursor:"pointer",background:view===v?`${TEAL}18`:SURF,color:view===v?TEAL:TX3,textTransform:"capitalize"}}>{v}</button>
         ))}
-        <button onClick={onAdd} style={{padding:"5px 16px",fontFamily:IN,fontSize:11,fontWeight:700,borderRadius:20,border:`1px solid ${TEAL}`,cursor:"pointer",background:`${TEAL}18`,color:TEAL,letterSpacing:"0.03em"}}>+ Add post</button>
+        {onAdd&&<button onClick={onAdd} style={{padding:"5px 16px",fontFamily:IN,fontSize:11,fontWeight:700,borderRadius:20,border:`1px solid ${TEAL}`,cursor:"pointer",background:`${TEAL}18`,color:TEAL,letterSpacing:"0.03em"}}>+ Add post</button>}
       </div>
     </div>
   );
@@ -682,6 +698,7 @@ function FilterBar({filter,setFilter,view,setView,onAdd}){
 
 function CalRow({p,selected,onSelect,onDelete,onDup}){
   const isMob=useIsMobile();
+  const isAdmin=useRole()==="admin";
   const pl=getPillar(p.pillar);
   const thumb=(p.images||[])[0]||(p.video||[])[0]||null;
   if(isMob) return(
@@ -699,12 +716,12 @@ function CalRow({p,selected,onSelect,onDelete,onDup}){
           <span style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX3}}>{p.day} · W{p.week} · {p.format}</span>
         </div>
       </div>
-      <div style={{display:"flex",gap:6,flexShrink:0}}>
+      {isAdmin&&<div style={{display:"flex",gap:6,flexShrink:0}}>
         <button onClick={e=>{e.stopPropagation();onDup(p.id);}} title="Duplicate" style={{border:"none",background:"none",cursor:"pointer",color:TX4,padding:4,lineHeight:1,display:"flex",alignItems:"center"}}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
         </button>
         <button onClick={e=>{e.stopPropagation();onDelete(p.id);}} style={{fontFamily:IN,fontSize:15,border:"none",background:"none",cursor:"pointer",color:TX4,padding:"0 2px",lineHeight:1}}>×</button>
-      </div>
+      </div>}
     </div>
   );
   return(
@@ -721,10 +738,10 @@ function CalRow({p,selected,onSelect,onDelete,onDup}){
       <Tag label={p.pillar} bg={pl.bg} color={pl.color}/>
       <div style={{fontFamily:IN,fontSize:12,fontWeight:600,color:TX2,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{p.subject||<span style={{color:TX4,fontStyle:"italic"}}>No subject</span>}</div>
       <div style={{fontFamily:IN,fontSize:11,fontWeight:600,color:TX3}}>{p.format}</div>
-      <button onClick={e=>{e.stopPropagation();onDup(p.id);}} title="Duplicate" style={{border:"none",background:"none",cursor:"pointer",color:TX4,padding:0,lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center"}}>
+      {isAdmin?<button onClick={e=>{e.stopPropagation();onDup(p.id);}} title="Duplicate" style={{border:"none",background:"none",cursor:"pointer",color:TX4,padding:0,lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center"}}>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-      </button>
-      <button onClick={e=>{e.stopPropagation();onDelete(p.id);}} style={{fontFamily:IN,fontSize:15,border:"none",background:"none",cursor:"pointer",color:TX4,padding:0,lineHeight:1}}>×</button>
+      </button>:<div/>}
+      {isAdmin?<button onClick={e=>{e.stopPropagation();onDelete(p.id);}} style={{fontFamily:IN,fontSize:15,border:"none",background:"none",cursor:"pointer",color:TX4,padding:0,lineHeight:1}}>×</button>:<div/>}
     </div>
   );
 }
@@ -732,6 +749,7 @@ function CalRow({p,selected,onSelect,onDelete,onDup}){
 // ── Feed Tab ──────────────────────────────────────────────────────
 
 function FeedTab({month}){
+  const isAdmin=useRole()==="admin";
   const[posts,setPosts]=useState([]);
   const[loading,setLoading]=useState(true);
   const[adding,setAdding]=useState(false);
@@ -780,7 +798,7 @@ function FeedTab({month}){
     <div>
       <PillarTracker items={posts}/>
       <ContentStats items={posts} label="Feed posts"/>
-      <FilterBar filter={filter} setFilter={setFilter} view={view} setView={setView} onAdd={()=>{setAdding(true);setSelected(null);setEditing(null);}}/>
+      <FilterBar filter={filter} setFilter={setFilter} view={view} setView={setView} onAdd={isAdmin?()=>{setAdding(true);setSelected(null);setEditing(null);}:null}/>
       {adding&&<PostForm type="feed" onAdd={add} onCancel={()=>setAdding(false)} month={month}/>}
       {editing&&edP&&<EditForm post={edP} type="feed" onSave={upd} onCancel={()=>setEditing(null)}/>}
       {loading&&<div style={{textAlign:"center",padding:"60px 20px",fontFamily:IN,fontSize:13,fontWeight:600,color:TX3}}>Loading...</div>}
@@ -836,6 +854,7 @@ function FeedTab({month}){
 // ── Stories Tab ───────────────────────────────────────────────────
 
 function StoriesTab({month}){
+  const isAdmin=useRole()==="admin";
   const[seqs,setSeqs]=useState([]);
   const[loading,setLoading]=useState(true);
   const[adding,setAdding]=useState(false);
@@ -891,7 +910,7 @@ function StoriesTab({month}){
             return<button key={s} onClick={()=>setFilter(s)} style={{padding:"5px 12px",fontFamily:IN,fontSize:11,fontWeight:600,borderRadius:20,border:`1px solid ${active?ss.border:BORDER}`,cursor:"pointer",background:active?ss.bg:SURF,color:active?ss.color:TX3,letterSpacing:"0.03em"}}>{s}</button>;
           })}
         </div>
-        <button onClick={()=>{setAdding(true);setSelected(null);setEditing(null);}} style={{padding:"5px 16px",fontFamily:IN,fontSize:11,fontWeight:700,borderRadius:20,border:`1px solid ${TEAL}`,cursor:"pointer",background:`${TEAL}18`,color:TEAL,letterSpacing:"0.03em"}}>+ Add sequence</button>
+        {isAdmin&&<button onClick={()=>{setAdding(true);setSelected(null);setEditing(null);}} style={{padding:"5px 16px",fontFamily:IN,fontSize:11,fontWeight:700,borderRadius:20,border:`1px solid ${TEAL}`,cursor:"pointer",background:`${TEAL}18`,color:TEAL,letterSpacing:"0.03em"}}>+ Add sequence</button>}
       </div>
       {adding&&<PostForm type="story" onAdd={add} onCancel={()=>setAdding(false)} month={month}/>}
       {editing&&edS&&<EditForm post={edS} type="story" onSave={upd} onCancel={()=>setEditing(null)}/>}
@@ -949,12 +968,12 @@ function StoriesTab({month}){
                             <span style={{fontFamily:IN,fontSize:10,fontWeight:600,color:TX3}}>{s.day} · W{s.week} · {isRepost?"repost":"unique"}</span>
                           </div>
                         </div>
-                        <div style={{display:"flex",gap:6,flexShrink:0}}>
+                        {isAdmin&&<div style={{display:"flex",gap:6,flexShrink:0}}>
                           <button onClick={e=>{e.stopPropagation();dup(s.id);}} title="Duplicate" style={{border:"none",background:"none",cursor:"pointer",color:TX4,padding:4,lineHeight:1,display:"flex",alignItems:"center"}}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
                           </button>
                           <button onClick={e=>{e.stopPropagation();del(s.id);}} style={{fontFamily:IN,fontSize:15,border:"none",background:"none",cursor:"pointer",color:TX4,padding:"0 2px",lineHeight:1}}>×</button>
-                        </div>
+                        </div>}
                       </div>
                     );
                     return(
@@ -969,10 +988,10 @@ function StoriesTab({month}){
                         <Tag label={s.pillar} bg={pl.bg} color={pl.color}/>
                         <div style={{fontFamily:IN,fontSize:12,fontWeight:600,color:TX2,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{(s.frames||"").split("\n")[0]||<span style={{color:TX4,fontStyle:"italic"}}>No frames</span>}</div>
                         <span style={{fontFamily:IN,fontSize:10,fontWeight:600,padding:"3px 8px",borderRadius:20,background:isRepost?SURF3:`${GREEN}22`,color:isRepost?TX3:"#A8D672",border:`1px solid ${isRepost?BORDER:"#639922"}`}}>{isRepost?"repost":"unique"}</span>
-                        <button onClick={e=>{e.stopPropagation();dup(s.id);}} title="Duplicate" style={{border:"none",background:"none",cursor:"pointer",color:TX4,padding:0,lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        {isAdmin?<button onClick={e=>{e.stopPropagation();dup(s.id);}} title="Duplicate" style={{border:"none",background:"none",cursor:"pointer",color:TX4,padding:0,lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center"}}>
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-                        </button>
-                        <button onClick={e=>{e.stopPropagation();del(s.id);}} style={{fontFamily:IN,fontSize:15,border:"none",background:"none",cursor:"pointer",color:TX4,padding:0,lineHeight:1}}>×</button>
+                        </button>:<div/>}
+                        {isAdmin?<button onClick={e=>{e.stopPropagation();del(s.id);}} style={{fontFamily:IN,fontSize:15,border:"none",background:"none",cursor:"pointer",color:TX4,padding:0,lineHeight:1}}>×</button>:<div/>}
                       </div>
                     );
                   })}
@@ -987,6 +1006,31 @@ function StoriesTab({month}){
   );
 }
 
+// ── Login ─────────────────────────────────────────────────────────
+
+function Login({onLogin}){
+  const[code,setCode]=useState("");
+  const[err,setErr]=useState(false);
+  const submit=()=>{const r=ROLE_CODES[code.trim()];if(r){onLogin(r);}else{setErr(true);setTimeout(()=>setErr(false),2500);}};
+  return(
+    <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:BG}}>
+      <div style={{background:SURF,border:`1px solid ${BORDER}`,borderRadius:16,padding:"36px 32px",width:"90%",maxWidth:340}}>
+        <div style={{width:32,height:2,background:TEAL,borderRadius:1,marginBottom:14}}/>
+        <div style={{fontFamily:PF,fontWeight:700,fontStyle:"italic",fontSize:26,color:TX1,marginBottom:4}}>Tara Rose</div>
+        <div style={{fontFamily:IN,fontSize:11,fontWeight:600,color:TEAL,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:28}}>Content System</div>
+        <div style={{fontFamily:IN,fontSize:10,fontWeight:700,color:TX3,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:6}}>Access code</div>
+        <input type="password" value={code} onChange={e=>{setCode(e.target.value);setErr(false);}} onKeyDown={e=>e.key==="Enter"&&submit()}
+          placeholder="Enter your access code" autoFocus
+          style={{width:"100%",fontFamily:IN,fontWeight:600,fontSize:14,padding:"10px 14px",borderRadius:10,
+            border:`1px solid ${err?CORAL:BORDER}`,background:SURF2,color:TX1,boxSizing:"border-box",marginBottom:err?6:16,outline:"none"}}/>
+        {err&&<div style={{fontFamily:IN,fontSize:11,fontWeight:600,color:CORAL,marginBottom:12}}>Incorrect access code.</div>}
+        <button onClick={submit} style={{width:"100%",padding:"12px",fontFamily:IN,fontSize:13,fontWeight:700,borderRadius:10,
+          border:`1px solid ${TEAL}`,cursor:"pointer",background:`${TEAL}22`,color:TEAL}}>Enter</button>
+      </div>
+    </div>
+  );
+}
+
 // ── App ───────────────────────────────────────────────────────────
 
 export default function App(){
@@ -994,6 +1038,8 @@ export default function App(){
   const[tab,setTab]=useState("Feed Calendar");
   const[sideOpen,setSideOpen]=useState(false);
   const isMob=useIsMobile();
+  const[role,setRole]=useState(()=>{const r=localStorage.getItem("cms_role");return["admin","client","team"].includes(r)?r:null;});
+  if(!role) return <Login onLogin={r=>{localStorage.setItem("cms_role",r);setRole(r);}}/>;
 
   const sidebarContent=(
     <>
@@ -1001,6 +1047,10 @@ export default function App(){
         <div style={{width:32,height:2,background:TEAL,borderRadius:1,marginBottom:12}}/>
         <div style={{fontFamily:IN,fontSize:11,fontWeight:700,color:TX1,letterSpacing:"0.12em",textTransform:"uppercase"}}>Tara Rose</div>
         <div style={{fontFamily:IN,fontSize:9,fontWeight:600,color:TEAL,letterSpacing:"0.12em",textTransform:"uppercase",marginTop:3}}>Content System</div>
+        <div style={{marginTop:12,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <span style={{fontFamily:IN,fontSize:10,fontWeight:700,color:TX3,letterSpacing:"0.06em",textTransform:"uppercase"}}>{role}</span>
+          <button onClick={()=>{localStorage.removeItem("cms_role");setRole(null);}} style={{fontFamily:IN,fontSize:10,fontWeight:700,color:TX4,border:"none",background:"none",cursor:"pointer",padding:0,letterSpacing:"0.04em"}}>Sign out</button>
+        </div>
       </div>
       <div style={{padding:"20px 12px 12px"}}>
         <div style={{fontFamily:IN,fontSize:9,fontWeight:600,color:TX3,letterSpacing:"0.1em",textTransform:"uppercase",padding:"0 8px",marginBottom:8}}>Views</div>
@@ -1014,7 +1064,8 @@ export default function App(){
   );
 
   return(
-    <div style={{display:"flex",minHeight:"100vh",background:BG,fontFamily:IN}}>
+    <RoleCtx.Provider value={role}>
+    <div style={{display:"flex",height:"100vh",overflow:"hidden",background:BG,fontFamily:IN}}>
       <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,700&family=Inter:wght@600&display=swap" rel="stylesheet"/>
 
       {/* Desktop sidebar */}
@@ -1074,5 +1125,6 @@ export default function App(){
         </div>}
       </div>
     </div>
+    </RoleCtx.Provider>
   );
 }
